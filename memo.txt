@@ -1,0 +1,19 @@
+# 起動法
+flask db init                   # 初期化（初回だけ）
+flask db migrate -m "init"      # モデルからマイグレーションスクリプト作成
+flask db upgrade                # テーブルをDBに反映
+python seed.py
+flask run
+
+# ログイン
+curl.exe -X POST http://localhost:5000/api/v1/auth/login -H "Content-Type: application/json" -d @test_data/user.json
+
+# 保護ルート（トークン要）
+curl.exe -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc1MjcyNTYxMCwianRpIjoiMmQyYTYzZWMtNTZkNi00NGMzLWFmOGMtYWJiNzI2ZDQ4ZGU5IiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjEiLCJuYmYiOjE3NTI3MjU2MTAsImNzcmYiOiJiOGZlZDdiMy04NjY1LTQ2ZjMtYmEwMy02M2VkYWIyZTJiN2EiLCJleHAiOjE3NTI3MjkyMTB9.fN72y5OCL0EKyD_knat-TXh7BazJmFSelNPVvPNtXN4" http://localhost:5000/api/v1/user
+# エラー{"msg":"Missing Authorization Header"}
+curl.exe http://localhost:5000/api/v1/user
+
+✅ 対策①：use_reloader=False を明示する（開発時）
+if __name__ == "__main__":
+    app.run(debug=True, use_reloader=False)
+これでログ出力は 1回だけ になります。

@@ -1,0 +1,10 @@
+flask
+flask-smorest
+flask-sqlalchemy
+flask-migrate
+flask-jwt-extended
+flask-cors
+marshmallow
+webargs
+bcrypt
+python-dotenv
