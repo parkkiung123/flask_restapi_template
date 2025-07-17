@@ -5,7 +5,6 @@ from app.schemas.schemas import LoginSchema
 from app.extensions import api
 from app.models.models import User
 from flask_jwt_extended import create_access_token
-from datetime import timedelta
 import bcrypt
 
 bp = Blueprint("auth", __name__, description="認証ルート")

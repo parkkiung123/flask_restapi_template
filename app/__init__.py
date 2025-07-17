@@ -3,6 +3,7 @@ from flask import Flask
 from app.extensions import db, migrate, jwt, api, cors
 from app.routes.user import bp as user_bp
 from app.routes.auth import bp as auth_bp
+from app.routes.sensor import bp as sensor_bp
 from app.config import Config
 
 def create_app():
@@ -18,6 +19,7 @@ def create_app():
     url_prefix = app.config["API_URL_PREFIX"]
     api.register_blueprint(user_bp, url_prefix=f"{url_prefix}/user")
     api.register_blueprint(auth_bp, url_prefix=f"{url_prefix}/auth")
+    api.register_blueprint(sensor_bp, url_prefix=f"{url_prefix}/sensor")
 
     # ログレベルとフォーマットを調整
     app.logger.setLevel(logging.INFO)

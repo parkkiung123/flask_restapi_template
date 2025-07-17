@@ -14,9 +14,11 @@ curl.exe -H "Authorization: Bearer <トークン>" http://localhost:5000/api/v1/
 curl.exe http://localhost:5000/api/v1/user/list
 
 # ユーザー追加
-curl.exe -X POST http://localhost:5000/api/v1/user/add -H "Authorization: Bearer <トークン>" -H "Content-Type: application/json" -d @test_data/input.json
+curl.exe -X POST http://localhost:5000/api/v1/user/add -H "Authorization: Bearer <トークン>" -H "Content-Type: application/json" -d @test_data/users_input.json
 
 ✅ 対策①：use_reloader=False を明示する（開発時）
 if __name__ == "__main__":
     app.run(debug=True, use_reloader=False)
 これでログ出力は 1回だけ になります。
+
+# センサー入力

@@ -23,6 +23,7 @@ class UserList(MethodView):
 
 @bp.route("/add")
 class UserAdd(MethodView):
+    @jwt_required()
     @bp.arguments(UserSchema)
     @bp.response(201, UserSchema)
     def post(self, data):
