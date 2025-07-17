@@ -11,6 +11,9 @@ bp = Blueprint("user", __name__, description="ユーザーAPI")
 
 @bp.route("")
 class UserList(MethodView):
+    # クラス全体を保護したい
+    # decorators = [jwt_required()]
+    
     # 保護されたルート
     @jwt_required()
     @bp.response(200, UserSchema(many=True))
