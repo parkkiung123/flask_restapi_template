@@ -2,6 +2,7 @@
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from app.schemas.schemas import LoginSchema
+from app.extensions import api
 from app.models.models import User
 from flask_jwt_extended import create_access_token
 from datetime import timedelta
@@ -26,6 +27,6 @@ class Login(MethodView):
 
         access_token = create_access_token(
             identity=str(user.id),
-            expires_delta=timedelta(hours=1),
+            expires_delta=api.config["JWT_ACCESS_TOKEN_EXPIRES"],
         )
         return {"access_token": access_token}, 200

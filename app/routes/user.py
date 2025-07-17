@@ -9,11 +9,10 @@ import bcrypt
 
 bp = Blueprint("user", __name__, description="ユーザーAPI")
 
-@bp.route("")
+@bp.route("/list")
 class UserList(MethodView):
     # クラス全体を保護したい
-    # decorators = [jwt_required()]
-    
+    # decorators = [jwt_required()]    
     # 保護されたルート
     @jwt_required()
     @bp.response(200, UserSchema(many=True))
@@ -22,6 +21,8 @@ class UserList(MethodView):
         current_app.logger.info(f"アクセス中のユーザーID: {user_id}")
         return User.query.all()
 
+@bp.route("/add")
+class UserAdd(MethodView):
     @bp.arguments(UserSchema)
     @bp.response(201, UserSchema)
     def post(self, data):

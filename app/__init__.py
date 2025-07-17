@@ -15,8 +15,9 @@ def create_app():
     api.init_app(app)
     cors.init_app(app, origins=["http://localhost:5173"])
 
-    api.register_blueprint(user_bp, url_prefix=api.config["API_URL_PREFIX"] + "/user")
-    api.register_blueprint(auth_bp, url_prefix=api.config["API_URL_PREFIX"] + "/auth")
+    url_prefix = app.config["API_URL_PREFIX"]
+    api.register_blueprint(user_bp, url_prefix=f"{url_prefix}/user")
+    api.register_blueprint(auth_bp, url_prefix=f"{url_prefix}/auth")
 
     # ログレベルとフォーマットを調整
     app.logger.setLevel(logging.INFO)
