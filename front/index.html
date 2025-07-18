@@ -40,76 +40,45 @@
     }
 
     async function initChart() {
-        const rawData = await fetchData();
+      const data = await fetchData();
 
-        let processedData = [];
-        let lastValidValue = null;
+      console.log(data);
 
-        rawData.forEach((d, i) => {
-            if (typeof d.value === 'number' && d.value >= 0) {
-            // 通常のデータ点
-            processedData.push({
-                x: new Date(d.timestamp),
-                y: d.value,
-                pointBackgroundColor: 'rgba(75, 192, 192, 1)' // 通常色
-            });
-            lastValidValue = d.value;
-            } else if (d.value === null && lastValidValue !== null) {
-            // valueがnullでstatusが定義されている
-            if (d.status === 0 || d.status === 1) {
-                processedData.push({
-                x: new Date(d.timestamp),
-                y: lastValidValue,
-                pointBackgroundColor: d.status === 0 ? 'red' : 'green'
-                });
+      const labels = data.map(d => formatTime(d.timestamp));
+      const values = data.map(d => d.value);
+
+      if (!chart) {
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Face Distance ' + (data[0].unit || 'cm'),
+              data: values,
+              borderColor: 'rgba(75, 192, 192, 1)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              fill: true,
+              tension: 0.1
+            }]
+          },
+          options: {
+            scales: {
+              x: {
+                title: { display: true, text: 'Time' },
+                ticks: { maxRotation: 45, minRotation: 45 }
+              },
+              y: {
+                title: { display: true, text: 'Distance (cm)' },
+                beginAtZero: true
+              }
             }
-            }
-            // valueがnullでstatusもnull、またはvalueが -1 等 → スキップ
+          }
         });
-
-        if (!chart) {
-            chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: [{
-                label: 'Face Distance ' + (rawData[0].unit || 'cm'),
-                data: processedData,
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                fill: true,
-                tension: 0.1,
-                parsing: false,  // x/y直接指定のため必要
-                pointRadius: 6,
-                pointBackgroundColor: processedData.map(p => p.pointBackgroundColor)
-                }]
-            },
-            options: {
-                scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                    unit: 'minute'
-                    },
-                    title: {
-                    display: true,
-                    text: 'Time'
-                    }
-                },
-                y: {
-                    title: {
-                    display: true,
-                    text: 'Distance ' + (rawData[0].unit || 'cm')
-                    },
-                    beginAtZero: true
-                }
-                }
-            }
-            });
-        } else {
-            chart.data.datasets[0].data = processedData;
-            chart.data.datasets[0].pointBackgroundColor = processedData.map(p => p.pointBackgroundColor);
-            chart.update();
-        }
+      } else {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.update();
+      }
     }
 
     initChart().then(() => {
