@@ -14,7 +14,7 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
     api.init_app(app)
-    cors.init_app(app, origins=["http://localhost:5173"])
+    cors.init_app(app, origins=["http://localhost:8080", "http://localhost:8081"])
 
     url_prefix = app.config["API_URL_PREFIX"]
     api.register_blueprint(user_bp, url_prefix=f"{url_prefix}/user")

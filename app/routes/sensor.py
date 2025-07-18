@@ -13,6 +13,13 @@ class SensorList(MethodView):
         # 全センサー一覧を返す
         sensors = Sensor.query.all()
         return sensors
+    
+@bp.route("/get/<string:device_id>")
+class SensorByDevice(MethodView):
+    @bp.response(200, SensorSchema(many=True))
+    def get(self, device_id):
+        sensors = Sensor.query.filter_by(device_id=device_id).all()
+        return sensors
 
 @bp.route("/add")
 class SensorAdd(MethodView):
