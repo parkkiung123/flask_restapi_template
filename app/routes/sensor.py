@@ -14,12 +14,27 @@ class SensorList(MethodView):
         sensors = Sensor.query.all()
         return sensors
     
-@bp.route("/get/<string:device_id>")
-class SensorByDevice(MethodView):
+@bp.route("/getAll/<string:device_id>")
+class SensorGetAllDataByDevice(MethodView):
     @bp.response(200, SensorSchema(many=True))
     def get(self, device_id):
         sensors = Sensor.query.filter_by(device_id=device_id).all()
         return sensors
+    
+@bp.route("/get/<string:device_id>/<int:dataNum>")
+class SensorGetDataByDevice(MethodView):
+    @bp.response(200, SensorSchema(many=True))
+    def get(self, device_id, dataNum):
+        # 降順で最新データを dataNum 件取得（効率重視）
+        latest_data = (
+            Sensor.query
+            .filter_by(device_id=device_id)
+            .order_by(Sensor.id.desc())
+            .limit(dataNum)
+            .all()
+        )
+        # 昇順にして返却
+        return sorted(latest_data, key=lambda x: x.id)
 
 @bp.route("/add")
 class SensorAdd(MethodView):

@@ -4,14 +4,17 @@
   <meta charset="UTF-8" />
   <title>Face Distance Real-time Graph</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
 </head>
 <body>
-  <h2>Face Distance (cm) - Last 1 Hour</h2>
+  <h2>Face Distance (cm)</h2>
   <canvas id="faceDistChart" width="800" height="400"></canvas>
 
   <script>
     const apiUrl = "http://localhost:5000/api/v1/sensor/get/"
     const device_id = "face_dist_001"
+    const dataNum = 10 // 取得するデータ数
     const time_mode = "local" // "local" or "utc"
     const ctx = document.getElementById('faceDistChart').getContext('2d');
     let chart;
@@ -20,16 +23,16 @@
         return sensorJsonList.map(sensor => {
             const data = sensor.data || {};
             return {
-            unit: data.unit || null,
-            value: data.value || null,            
-            status: sensor.status || null,
-            timestamp: sensor.timestamp || null,
+              unit: data.unit || null,
+              value: data.value || null,            
+              status: sensor.status ?? null,
+              timestamp: sensor.timestamp || null,
             };
         });
     }
 
     async function fetchData() {
-      const res = await fetch(apiUrl + device_id);
+      const res = await fetch(apiUrl + device_id + '/' + dataNum);
       const data = extractSensorData(await res.json());
       return data;
     }
@@ -39,64 +42,112 @@
       return d.toLocaleTimeString(); // 時:分:秒形式
     }
 
-    async function initChart() {
+    async function updateChart() {
       const data = await fetchData();
 
-      console.log(data);
+      const category1 = []; // 通常点: valueがnullではない、かつvalueが0以上
+      const category2 = []; // 異常点: valueが-1
+      const category3 = []; // 電源OFF点: valueがnullでstatusが0
+      const category4 = []; // 電源ON点: valueがnullでstatusが1
 
-      const labels = data.map(d => formatTime(d.timestamp));
-      const values = data.map(d => d.value);
+      data.forEach(item => {
+        if (item.value !== null && item.value > 0) {
+          category1.push(item);
+        } else if (item.value === -1) {
+          category2.push(item);
+        } else if (item.value === null && item.status === 0) {
+          category3.push(item);
+        } else if (item.value === null && item.status === 1) {
+          category4.push(item);
+        }
+      });
+
+      const datasets = [];
+
+      // Category 1: Line Chart
+      datasets.push({
+          label: '通常点 (顔検出)',
+          data: category1.map(item => ({ x: new Date(item.timestamp), y: item.value })),
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          type: 'line',
+          tension: 0.1, // ラインのなめらかさ
+          fill: false, // ラインの下を塗りつぶさない
+          pointRadius: 5, // 点のサイズ
+          pointBackgroundColor: 'rgba(75, 192, 192, 1)'
+      });
+      // Category 2: Scatter Chart (異常点)
+      datasets.push({
+          label: '異常点 (顔検出なし)',
+          data: category2.map(item => ({ x: new Date(item.timestamp), y: 0 })),
+          backgroundColor: 'black',
+          pointRadius: 7, // 点のサイズ
+          type: 'scatter'
+      });
+      // Category 3: Scatter Chart (電源OFF点)
+      datasets.push({
+          label: '電源OFF点',
+          data: category3.map(item => ({ x: new Date(item.timestamp), y: 0 })), // valueがnullなので適当なy値を設定
+          backgroundColor: 'red',
+          pointRadius: 7,
+          type: 'scatter'
+      });
+      // Category 4: Scatter Chart (電源ON点)
+      datasets.push({
+          label: '電源ON点',
+          data: category4.map(item => ({ x: new Date(item.timestamp), y: 0 })), // valueがnullなので適当なy値を設定
+          backgroundColor: 'green',
+          pointRadius: 7,
+          type: 'scatter'
+      });
 
       if (!chart) {
         chart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Face Distance ' + (data[0].unit || 'cm'),
-              data: values,
-              borderColor: 'rgba(75, 192, 192, 1)',
-              backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              fill: true,
-              tension: 0.1
-            }]
-          },
-          options: {
-            scales: {
-              x: {
-                title: { display: true, text: 'Time' },
-                ticks: { maxRotation: 45, minRotation: 45 }
-              },
-              y: {
-                title: { display: true, text: 'Distance (cm)' },
-                beginAtZero: true
-              }
+            data: {
+                datasets: datasets
+            },
+            options: {
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            // unit と stepSize は削除し、データポイントの時刻のみを表示する設定に変更
+                            unit: 'second', // 秒単位で表示
+                            displayFormats: {
+                                second: 'MM/DD HH:mm:ss' // 秒まで表示するフォーマットは維持
+                            }
+                        },
+                        ticks: {
+                            source: 'data', // ラベルのソースをデータポイントにする
+                            autoSkip: false, // ラベルの自動スキップを無効にする（全てのデータ点のラベルを表示）
+                            maxRotation: 45, // ラベルが重なる場合に備え、回転を許可する
+                            minRotation: 45
+                        },
+                        title: {
+                            display: true,
+                            text: '時刻'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '顔距離 (cm)'
+                        }
+                    }
+                },
             }
-          }
         });
       } else {
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = values;
+        // いちおうこれで更新するが、datasets全体を置き換える
+        chart.data.datasets = datasets;
         chart.update();
+        console.log("Chart updated with new data");
       }
     }
 
-    initChart().then(() => {
-      console.log("Chart initialized");
-    });
-
-
-    
-
-    // async function updateChart() {
-    //   const data = await fetchData();
-
-      
-    // }
-
-    // // 初回描画＋10秒毎に更新
-    // updateChart();
-    // setInterval(updateChart, 10000);
+    // 初回描画＋5秒毎に更新
+    updateChart();
+    setInterval(updateChart, 5000);
   </script>
 </body>
 </html>
