@@ -11,40 +11,80 @@ class LoginSchema(Schema):
     userpass = fields.Str(required=True)
 
 class SensorSchema(Schema):
-    """Sensor テーブルのデータ構造を示すスキーマ。"""
+    id = fields.Int(
+        dump_only=True,
+        metadata={"description": "入力順番を示す固有キー"}
+    )
 
-    id = fields.Int(dump_only=True, description="入力順番を示す固有キー")
     device_id = fields.Str(
         required=True,
         validate=validate.Length(max=50),
-        description="デバイスの識別ID（例: 'raspi-001'）"
+        metadata={"description": "デバイスの識別ID（例: 'raspi-001'）"}
     )
-    type = fields.Str(
+
+    type = fields.Method(
+        serialize='get_type_value',
+        deserialize='load_type_value',
         required=True,
-        validate=validate.OneOf([e.value for e in SensorType]),
-        description=f"センサータイプ（{",".join([e.value for e in SensorType])}）"
+        metadata={"description": "センサータイプ（face_dist, temperature）"}
     )
+
+    def get_type_value(self, obj):
+        return obj.type.value if isinstance(obj.type, SensorType) else obj.type
+
+    def load_type_value(self, value):
+        return SensorType(value)
+
     data = fields.Dict(
         required=False,
         allow_none=True,
-        description="センサーからの測定データ（JSON形式, keyはvalue, unit, latitude, longitude）"
+        metadata={
+            "description": (
+                "センサーからの測定データ（JSON形式）\n\n"
+                "face_dist => {\n"
+                '    "value": 100.02,\n'
+                '    "unit": "cm",\n'
+                '    "latitude": 35.6895,\n'
+                '    "longitude": 139.6917\n'
+                "}\n\n"
+                "temperature => {\n"
+                '    "value": 30.5,\n'
+                '    "unit": "Celsius",\n'
+                '    "latitude": 35.6895,\n'
+                '    "longitude": 139.6917\n'
+                "}"
+            )
+        }
     )
+
     timestamp = fields.DateTime(
         required=True,
-        description="測定された日時"
+        metadata={"description": "測定された日時"}
     )
-    status = fields.Int(
+
+    status = fields.Method(
+        serialize='get_status_value',
+        deserialize='load_status_value',
         required=True,
-        validate=validate.OneOf([e.value for e in SensorStatus]),
-        description="センサー状態（0 = OFF, 1 = ON）"
+        metadata={"description": "センサー状態（0 = OFF, 1 = ON）"}
     )
+
+    def get_status_value(self, obj):
+        # シリアライズ時にSensorStatus enumからvalueを返す
+        return obj.status.value if isinstance(obj.status, SensorStatus) else obj.status
+
+    def load_status_value(self, value):
+        # デシリアライズ時に数値からSensorStatus enumを作る
+        return SensorStatus(value)
+
     created_at = fields.DateTime(
         dump_only=True,
-        description="レコード作成日時（自動入力）"
+        metadata={"description": "レコード作成日時（自動入力）"}
     )
+
     updated_at = fields.DateTime(
         dump_only=True,
-        description="レコード最終更新日時（自動更新）"
+        metadata={"description": "レコード最終更新日時（自動更新）"}
     )
 
     class Meta:

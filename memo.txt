@@ -1,5 +1,5 @@
 # 起動法
-flask db init                   # 初期化（初回だけ）
+flask db init                   # 初期化（初回だけ）rm -r migrations (Error: Directory migrations already exists and is not empty)
 flask db migrate -m "init"      # モデルからマイグレーションスクリプト作成
 flask db upgrade                # テーブルをDBに反映
 python seed.py
@@ -21,4 +21,8 @@ if __name__ == "__main__":
     app.run(debug=True, use_reloader=False)
 これでログ出力は 1回だけ になります。
 
+# センサーリスト
+curl.exe http://localhost:5000/api/v1/sensor/list
+
 # センサー入力
+curl.exe -X POST http://localhost:5000/api/v1/sensor/add -H "Content-Type: application/json" -d @test_data/sensors_input.json

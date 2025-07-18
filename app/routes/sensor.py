@@ -1,8 +1,8 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import Sensor, db, SensorType, SensorStatus
-from schemas import SensorSchema
+from app.models.models import Sensor, db, SensorType, SensorStatus
+from app.schemas.schemas import SensorSchema
 
 bp = Blueprint("sensor", __name__, description="センサーAPI")
 
