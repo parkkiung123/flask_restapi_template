@@ -1,6 +1,8 @@
+from datetime import datetime, date
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from sqlalchemy import and_
 from app.models.models import Sensor, db, SensorType, SensorStatus
 from app.schemas.schemas import SensorSchema
 
@@ -25,10 +27,18 @@ class SensorGetAllDataByDevice(MethodView):
 class SensorGetDataByDevice(MethodView):
     @bp.response(200, SensorSchema(many=True))
     def get(self, device_id, dataNum):
-        # 降順で最新データを dataNum 件取得（効率重視）
+        # 今日の0:00（UTCの場合、ローカルに合わせるなら tz-aware に調整）
+        today_start = datetime.combine(date.today(), datetime.min.time())
+
+        # 最新の今日のデータを dataNum 件取得（降順）
         latest_data = (
             Sensor.query
-            .filter_by(device_id=device_id)
+            .filter(
+                and_(
+                    Sensor.device_id == device_id,
+                    Sensor.timestamp >= today_start
+                )
+            )
             .order_by(Sensor.id.desc())
             .limit(dataNum)
             .all()

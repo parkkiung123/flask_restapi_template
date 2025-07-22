@@ -8,10 +8,16 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
 </head>
 <body>
-  <h2>Face Distance (cm)</h2>
-  <canvas id="faceDistChart" width="800" height="400"></canvas>
+  <h2>Face Distance (cm) <span id="today"></span></h2>
+  <canvas id="faceDistChart" style="width:700px; height:350px;"></canvas>
 
   <script>
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const date = today.getDate();
+    document.getElementById("today").textContent = `${year}/${month}/${date}`;
+
     const apiUrl = "http://localhost:5000/api/v1/sensor/get/"
     const device_id = "face_dist_001"
     const dataNum = 10 // 取得するデータ数
@@ -107,6 +113,7 @@
                 datasets: datasets
             },
             options: {
+                responsive: false,
                 scales: {
                     x: {
                         type: 'time',
