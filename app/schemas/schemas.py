@@ -10,6 +10,12 @@ class LoginSchema(Schema):
     userid = fields.Str(required=True)
     userpass = fields.Str(required=True)
 
+class DataSchema(Schema):
+    value = fields.Float()
+    unit = fields.Str()
+    latitude = fields.Float()
+    longitude = fields.Float()
+
 class SensorSchema(Schema):
     id = fields.Int(
         dump_only=True,
@@ -35,7 +41,8 @@ class SensorSchema(Schema):
     def load_type_value(self, value):
         return SensorType(value)
 
-    data = fields.Dict(
+    data = fields.Nested(
+        DataSchema,
         required=False,
         allow_none=True,
         metadata={
