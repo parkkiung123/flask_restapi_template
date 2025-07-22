@@ -15,10 +15,6 @@ class SensorType(enum.Enum):
     face_dist = "face_dist"
     temperature = "temperature"
 
-class SensorStatus(enum.Enum):
-    off = 0
-    on = 1
-
 class Sensor(db.Model):
     __tablename__ = 'sensors'
 
@@ -27,7 +23,7 @@ class Sensor(db.Model):
     type = db.Column(Enum(SensorType), nullable=False)
     data = db.Column(JSON, nullable=True)
     timestamp = db.Column(db.DateTime(timezone=True), nullable=False)
-    status = db.Column(Enum(SensorStatus), nullable=False)
+    status = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, server_default=func.now(), nullable=False)
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 

@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, timedelta
 from app import create_app, db
-from app.models.models import Sensor, SensorType, SensorStatus
+from app.models.models import Sensor, SensorType
 
 @pytest.fixture
 def app():
@@ -23,7 +23,7 @@ def sample_sensor(app):
         type=SensorType.temperature,
         data={"value": 25},
         timestamp=datetime.utcnow(),
-        status=SensorStatus.on,
+        status=1,
     )
     db.session.add(sensor)
     db.session.commit()
@@ -66,7 +66,7 @@ def test_add_sensor(client, app):
         "type": "temperature",
         "data": {"value": 30},
         "timestamp": datetime.utcnow().isoformat(),
-        "status": 1,  # SensorStatus.onの値など
+        "status": 1,
     }
     res = client.post(url, json=new_sensor_data)
     assert res.status_code == 201

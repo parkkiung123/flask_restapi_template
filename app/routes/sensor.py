@@ -4,7 +4,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import and_
-from app.models.models import Sensor, db, SensorType, SensorStatus
+from app.models.models import Sensor, db, SensorType
 from app.schemas.schemas import SensorSchema
 
 bp = Blueprint("sensor", __name__, description="センサーAPI")
@@ -88,7 +88,7 @@ class SensorAdd(MethodView):
             type=SensorType(data["type"]),
             data=data.get("data"),
             timestamp=data["timestamp"],
-            status=SensorStatus(data["status"]),
+            status=int(data["status"]),
         )
         db.session.add(sensor)
         db.session.commit()
@@ -118,7 +118,7 @@ class SensorUpdate(MethodView):
         sensor.type = SensorType(data["type"]) if "type" in data else sensor.type
         sensor.data = data.get("data", sensor.data)
         sensor.timestamp = data.get("timestamp", sensor.timestamp)
-        sensor.status = SensorStatus(data["status"]) if "status" in data else sensor.status
+        sensor.status = int(data["status"])
 
         db.session.commit()
         return sensor
@@ -178,17 +178,12 @@ class SensorGetLatest(MethodView):
             abort(404, description="No sensor data found")
         return sensor
 
-# --- /getByStatus/<string:device_id>/<string:status> ---
-@bp.route("/getByStatus/<string:device_id>/<string:status>")
+# --- /getByStatus/<string:device_id>/<int:status> ---
+@bp.route("/getByStatus/<string:device_id>/<int:status>")
 class SensorGetByStatus(MethodView):
     @bp.response(200, SensorSchema(many=True))
     def get(self, device_id, status):
-        try:
-            status_enum = SensorStatus[status]
-        except KeyError:
-            abort(400, description="Invalid status value")
-
-        sensors = Sensor.query.filter_by(device_id=device_id, status=status_enum).all()
+        sensors = Sensor.query.filter_by(device_id=device_id, status=status).all()
         return sensors
 
 # --- /getByType/<string:device_id>/<string:type> ---

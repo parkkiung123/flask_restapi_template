@@ -1,5 +1,5 @@
 from marshmallow import Schema, fields, validate
-from app.models.models import SensorType, SensorStatus
+from app.models.models import SensorType
 
 class UserSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -69,20 +69,10 @@ class SensorSchema(Schema):
         metadata={"description": "測定された日時"}
     )
 
-    status = fields.Method(
-        serialize='get_status_value',
-        deserialize='load_status_value',
+    status = fields.Int(
         required=True,
         metadata={"description": "センサー状態（0 = OFF, 1 = ON）"}
     )
-
-    def get_status_value(self, obj):
-        # シリアライズ時にSensorStatus enumからvalueを返す
-        return obj.status.value if isinstance(obj.status, SensorStatus) else obj.status
-
-    def load_status_value(self, value):
-        # デシリアライズ時に数値からSensorStatus enumを作る
-        return SensorStatus(value)
 
     created_at = fields.DateTime(
         dump_only=True,

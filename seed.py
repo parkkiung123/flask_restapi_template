@@ -5,7 +5,7 @@ import bcrypt
 
 from app import create_app
 from app.extensions import db
-from app.models.models import User, Sensor, SensorType, SensorStatus
+from app.models.models import User, Sensor, SensorType
 
 def seed_users(test_mode=False):
     app = create_app(testing=test_mode)
@@ -38,7 +38,7 @@ def seed_users(test_mode=False):
                 "longitude": 139.6917
             },
             timestamp=datetime.now(),
-            status=SensorStatus.on
+            status=1
         )
         db.session.add(dummy)
         db.session.commit()
