@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from flask import request, abort
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -61,3 +62,113 @@ class SensorAdd(MethodView):
         db.session.add(sensor)
         db.session.commit()
         return sensor
+
+# --- /getById/<int:id> ---
+@bp.route("/getById/<int:id>")
+class SensorGetById(MethodView):
+    @bp.response(200, SensorSchema)
+    def get(self, id):
+        sensor = db.session.get(Sensor, id)
+        if not sensor:
+            abort(404, description="Sensor not found")
+        return sensor
+
+# --- /update/<int:id> ---
+@bp.route("/update/<int:id>")
+class SensorUpdate(MethodView):
+    @bp.arguments(SensorSchema)
+    @bp.response(200, SensorSchema)
+    def put(self, data, id):
+        sensor = db.session.get(Sensor, id)
+        if not sensor:
+            abort(404, description="Sensor not found")
+
+        sensor.device_id = data.get("device_id", sensor.device_id)
+        sensor.type = SensorType(data["type"]) if "type" in data else sensor.type
+        sensor.data = data.get("data", sensor.data)
+        sensor.timestamp = data.get("timestamp", sensor.timestamp)
+        sensor.status = SensorStatus(data["status"]) if "status" in data else sensor.status
+
+        db.session.commit()
+        return sensor
+
+# --- /delete/<int:id> ---
+@bp.route("/delete/<int:id>")
+class SensorDelete(MethodView):
+    @bp.response(204)
+    def delete(self, id):
+        sensor = db.session.get(Sensor, id)
+        if not sensor:
+            abort(404, description="Sensor not found")
+
+        db.session.delete(sensor)
+        db.session.commit()
+        return "", 204
+
+# --- /getByDateRange/<string:device_id> ---
+@bp.route("/getByDateRange/<string:device_id>")
+class SensorGetByDateRange(MethodView):
+    @bp.response(200, SensorSchema(many=True))
+    def get(self, device_id):
+        start_date = request.args.get("start")
+        end_date = request.args.get("end")
+
+        if not start_date or not end_date:
+            abort(400, description="start and end query parameters are required")
+
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            end_dt = datetime.fromisoformat(end_date)
+        except ValueError:
+            abort(400, description="Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)")
+
+        sensors = (
+            Sensor.query.filter(
+                Sensor.device_id == device_id,
+                Sensor.timestamp >= start_dt,
+                Sensor.timestamp <= end_dt,
+            )
+            .order_by(Sensor.timestamp.asc())
+            .all()
+        )
+        return sensors
+
+# --- /getLatest/<string:device_id> ---
+@bp.route("/getLatest/<string:device_id>")
+class SensorGetLatest(MethodView):
+    @bp.response(200, SensorSchema)
+    def get(self, device_id):
+        sensor = (
+            Sensor.query.filter_by(device_id=device_id)
+            .order_by(Sensor.timestamp.desc())
+            .first()
+        )
+        if not sensor:
+            abort(404, description="No sensor data found")
+        return sensor
+
+# --- /getByStatus/<string:device_id>/<string:status> ---
+@bp.route("/getByStatus/<string:device_id>/<string:status>")
+class SensorGetByStatus(MethodView):
+    @bp.response(200, SensorSchema(many=True))
+    def get(self, device_id, status):
+        try:
+            status_enum = SensorStatus[status]
+        except KeyError:
+            abort(400, description="Invalid status value")
+
+        sensors = Sensor.query.filter_by(device_id=device_id, status=status_enum).all()
+        return sensors
+
+# --- /getByType/<string:device_id>/<string:type> ---
+@bp.route("/getByType/<string:device_id>/<string:type>")
+class SensorGetByType(MethodView):
+    @bp.response(200, SensorSchema(many=True))
+    def get(self, device_id, type):
+        try:
+            type_enum = SensorType(type)
+        except ValueError:
+            abort(400, description="Invalid sensor type")
+
+        sensors = Sensor.query.filter_by(device_id=device_id, type=type_enum).all()
+        return sensors

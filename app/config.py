@@ -1,3 +1,4 @@
+# config.py
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -16,5 +17,10 @@ class Config:
     OPENAPI_URL_PREFIX = "/"
     OPENAPI_SWAGGER_UI_PATH = "/docs"
     OPENAPI_SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
-
     API_URL_PREFIX = os.getenv("API_URL_PREFIX", "/api/v1")
+
+
+class TestConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:1234@localhost/testdb_for_test_db"  # ★ テスト用DB
+    JWT_SECRET_KEY = "test-secret"

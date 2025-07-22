@@ -4,11 +4,16 @@ from app.extensions import db, migrate, jwt, api, cors
 from app.routes.user import bp as user_bp
 from app.routes.auth import bp as auth_bp
 from app.routes.sensor import bp as sensor_bp
-from app.config import Config
+from app.config import Config, TestConfig
 
-def create_app():
+def create_app(testing=False):
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    if testing:
+        app.config.from_object(TestConfig)
+    else:
+        app.config.from_object(Config)  
 
     db.init_app(app)
     migrate.init_app(app, db)
