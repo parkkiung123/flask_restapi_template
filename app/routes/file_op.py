@@ -61,7 +61,7 @@ class TextUpload(MethodView):
 @bp.route("/image")
 class ImageUpload(MethodView):
     @bp.doc(
-        description="画像ファイルをアップロードします（'jpg', 'bmp', 'png', 'gif'）",
+        description="画像ファイルをアップロードします（'jpg', 'jpeg', 'bmp', 'png', 'gif'）",
         requestBody={
             "content": {
                 "multipart/form-data": {
@@ -83,5 +83,5 @@ class ImageUpload(MethodView):
     @bp.arguments(FileSchema, location="files")
     def post(self, data):
         file = data["file"]
-        allowed = {"jpg", "bmp", "png", "gif"}
+        allowed = {"jpg", "jpeg", "bmp", "png", "gif"}
         return save_file(file, "image", allowed)

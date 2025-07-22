@@ -5,6 +5,7 @@ from app.routes.user import bp as user_bp
 from app.routes.auth import bp as auth_bp
 from app.routes.sensor import bp as sensor_bp
 from app.routes.file_op import bp as file_bp
+from app.routes.image import bp as img_proc_bp
 from app.config import Config, TestConfig
 
 def create_app(testing=False):
@@ -27,6 +28,7 @@ def create_app(testing=False):
     api.register_blueprint(auth_bp, url_prefix=f"{url_prefix}/auth")
     api.register_blueprint(sensor_bp, url_prefix=f"{url_prefix}/sensor")
     api.register_blueprint(file_bp, url_prefix=f"{url_prefix}/file")
+    api.register_blueprint(img_proc_bp, url_prefix=f"{url_prefix}/image")
 
     # ログレベルとフォーマットを調整
     app.logger.setLevel(logging.INFO)

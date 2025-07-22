@@ -22,6 +22,12 @@ class FileSchema(Schema):
         metadata={"description": "アップロードするファイル", "format": "binary"}
     )
 
+class ImageBase64Schema(Schema):
+    image = fields.String(
+        required=True,
+        metadata={"description": "base64エンコードされた画像文字列（ヘッダーなし）"}
+    )
+
 class SensorSchema(Schema):
     id = fields.Int(
         dump_only=True,
