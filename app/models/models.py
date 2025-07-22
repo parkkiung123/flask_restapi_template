@@ -28,4 +28,4 @@ class Sensor(db.Model):
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
     def __repr__(self):
-        return f"<Sensor id={self.id} type={self.type.value} status={self.status.name} timestamp={self.timestamp}>"
+        return f"<Sensor id={self.id} type={self.type.value} status={self.status} timestamp={self.timestamp}>"

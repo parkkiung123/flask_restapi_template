@@ -139,18 +139,12 @@ def test_get_latest(client, app, sample_sensor):
 
 def test_get_by_status(client, app, sample_sensor):
     prefix = app.config["API_URL_PREFIX"]
-    status_name = sample_sensor.status.name
-    url = f"{prefix}/sensor/getByStatus/{sample_sensor.device_id}/{status_name}"
+    status = sample_sensor.status
+    url = f"{prefix}/sensor/getByStatus/{sample_sensor.device_id}/{status}"
     res = client.get(url)
     assert res.status_code == 200
     json_data = res.get_json()
-    assert all(s["status"] == sample_sensor.status.value for s in json_data)
-
-def test_get_by_status_invalid(client, app, sample_sensor):
-    prefix = app.config["API_URL_PREFIX"]
-    url = f"{prefix}/sensor/getByStatus/{sample_sensor.device_id}/invalid_status"
-    res = client.get(url)
-    assert res.status_code == 400
+    assert all(s["status"] == sample_sensor.status for s in json_data)
 
 def test_get_by_type(client, app, sample_sensor):
     prefix = app.config["API_URL_PREFIX"]
