@@ -11,6 +11,7 @@ bp = Blueprint("sensor", __name__, description="センサーAPI")
 
 @bp.route("/list")
 class SensorList(MethodView):
+    @bp.doc(description="全センサーの一覧を取得します")  # ここでAPI説明を追加
     @bp.response(200, SensorSchema(many=True))
     def get(self):
         # 全センサー一覧を返す
@@ -19,6 +20,18 @@ class SensorList(MethodView):
     
 @bp.route("/getAll/<string:device_id>")
 class SensorGetAllDataByDevice(MethodView):
+    @bp.doc(
+        description="指定したdevice_idの全センサー情報を取得します",
+        parameters=[
+            {
+                "in": "path",
+                "name": "device_id",
+                "schema": {"type": "string"},
+                "required": True,
+                "description": "デバイスID"
+            }
+        ]            
+    )
     @bp.response(200, SensorSchema(many=True))
     def get(self, device_id):
         sensors = Sensor.query.filter_by(device_id=device_id).all()
@@ -26,11 +39,29 @@ class SensorGetAllDataByDevice(MethodView):
     
 @bp.route("/get/<string:device_id>/<int:dataNum>")
 class SensorGetDataByDevice(MethodView):
+    @bp.doc(
+        description="指定device_idの本日の最新データをdataNum個取得します",
+        parameters=[
+            {
+                "in": "path",
+                "name": "device_id",
+                "schema": {"type": "string"},
+                "required": True,
+                "description": "デバイスID"
+            },
+            {
+                "in": "path",
+                "name": "dataNum",
+                "schema": {"type": "int"},
+                "required": True,
+                "description": "取得するデータの件数"
+            }
+        ]
+    )
     @bp.response(200, SensorSchema(many=True))
     def get(self, device_id, dataNum):
         # 今日の0:00（UTCの場合、ローカルに合わせるなら tz-aware に調整）
         today_start = datetime.combine(date.today(), datetime.min.time())
-
         # 最新の今日のデータを dataNum 件取得（降順）
         latest_data = (
             Sensor.query
