@@ -16,6 +16,12 @@ class DataSchema(Schema):
     latitude = fields.Float()
     longitude = fields.Float()
 
+class FileSchema(Schema):
+    file = fields.Raw(
+        required=True,
+        metadata={"description": "アップロードするファイル", "format": "binary"}
+    )
+
 class SensorSchema(Schema):
     id = fields.Int(
         dump_only=True,

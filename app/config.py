@@ -7,6 +7,7 @@ load_dotenv()
 
 class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI", "sqlite:///data.db")
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
