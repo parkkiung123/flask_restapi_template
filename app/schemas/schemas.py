@@ -4,7 +4,24 @@ from app.models.models import SensorType
 class UserSchema(Schema):
     id = fields.Int(dump_only=True)
     userid = fields.Str(required=True)
+    name = fields.Str(required=True)
     userpass = fields.Str(required=True)
+    facephoto = fields.Method("get_facephoto", dump_only=True)
+    def get_facephoto(self, obj):
+        if obj.facephoto:
+            import base64
+            return base64.b64encode(obj.facephoto).decode('utf-8')
+        return None
+
+class UserListResScheme(Schema):
+    userid = fields.Str(required=True)
+    name = fields.Str(required=True)
+    facephoto = fields.Method("get_facephoto", dump_only=True)
+    def get_facephoto(self, obj):
+        if obj.facephoto:
+            import base64
+            return base64.b64encode(obj.facephoto).decode('utf-8')
+        return None
 
 class LoginSchema(Schema):
     userid = fields.Str(required=True)

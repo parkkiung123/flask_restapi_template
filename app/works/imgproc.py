@@ -2,21 +2,22 @@
 import os
 import cv2
 import numpy as np
-import mediapipe as mp  # type:ignore
-from mediapipe.tasks import python  # type:ignore
-from mediapipe.tasks.python import vision
 from app.works.utils.download_file import download_file
 
 use_tensorflow = True
-if use_tensorflow:
+if use_tensorflow:    
+    import mediapipe as mp  # type:ignore
+    from mediapipe.tasks import python  # type:ignore
+    from mediapipe.tasks.python import vision
     from keras_facenet import FaceNet
 
 class ImgProcessor:
     def __init__(self):
-        self.init_face_detector()
-        if use_tensorflow:
+        if use_tensorflow:            
+            self.init_face_detector()
             self.init_face_similarity()
         else:
+            self.detector = None
             self.facenet_model = None
 
     def get_grayscale(self, stream):
@@ -101,6 +102,9 @@ class ImgProcessor:
         return frame
     
     def face_crop(self, frame):
+        if self.detector is None:
+            raise ValueError("Face detector model is not initialized.")
+        
         # Mediapipe に渡すため RGBA に変換
         rgb_frame = mp.Image(
             image_format=mp.ImageFormat.SRGBA,

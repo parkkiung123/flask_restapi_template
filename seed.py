@@ -20,7 +20,7 @@ def seed_users(test_mode=False):
         print("adminユーザーはすでに存在します。")
     else:
         hashed_pw = bcrypt.hashpw("adminpass".encode(), bcrypt.gensalt()).decode()
-        admin = User(userid="admin", userpass=hashed_pw)
+        admin = User(userid="admin", name="管理者", userpass=hashed_pw)
         db.session.add(admin)
         db.session.commit()
         print("adminユーザーを登録しました。")
