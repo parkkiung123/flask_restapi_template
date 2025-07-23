@@ -80,9 +80,11 @@ class SensorGetDataByDevice(MethodView):
 
 @bp.route("/add")
 class SensorAdd(MethodView):
+    @jwt_required()
     @bp.arguments(SensorSchema)
     @bp.response(201, SensorSchema)
     def post(self, data):
+        """保護されたルート（JWT 必須）"""
         sensor = Sensor(
             device_id=data["device_id"],
             type=SensorType(data["type"]),
