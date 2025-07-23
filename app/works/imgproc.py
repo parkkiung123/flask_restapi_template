@@ -4,7 +4,8 @@ import cv2
 import numpy as np
 from app.works.utils.download_file import download_file
 
-use_tensorflow = True
+# 処理が重くなるため、Falseにしておく、普段は画像処理を使わないとする
+use_tensorflow = False
 if use_tensorflow:    
     import mediapipe as mp  # type:ignore
     from mediapipe.tasks import python  # type:ignore

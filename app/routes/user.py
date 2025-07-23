@@ -40,11 +40,12 @@ class UserAdd(MethodView):
             photo_arr = shared_img_processor.get_face_crop(file.stream)
             if photo_arr is None:
                 photo_data = None
-            success, encoded_image = cv2.imencode('.png', photo_arr)
-            if not success:
-                raise ValueError("画像のエンコードに失敗しました")
             else:
-                photo_data = encoded_image
+                success, encoded_image = cv2.imencode('.png', photo_arr)
+                if not success:
+                    raise ValueError("画像のエンコードに失敗しました")
+                else:
+                    photo_data = encoded_image
         else:
             photo_data = None
 
