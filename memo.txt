@@ -26,3 +26,8 @@ curl.exe http://localhost:5000/api/v1/sensor/list
 
 # センサー入力
 curl.exe -X POST http://localhost:5000/api/v1/sensor/add -H "Content-Type: application/json" -d @test_data/sensors_input.json
+
+# テスト
+pytest -v
+pytest app/tests/test_sensor.py
+pytest app/tests/test_sensor.py::test_get_list

@@ -10,8 +10,14 @@
 <body>
   <h2>Face Distance (cm) <span id="today"></span></h2>
   <canvas id="faceDistChart" style="width:700px; height:350px;"></canvas>
+  <!-- 追加：ページ移動ボタン -->
+  <button id="moveBtn" style="margin-top: 20px; font-size: 16px;">画像処理APIのページへ</button>
 
   <script>
+    document.getElementById('moveBtn').addEventListener('click', () => {
+      window.location.href = 'index2.html';
+    });
+    
     const today = new Date();
     const year = today.getFullYear();
     const month = today.getMonth() + 1;

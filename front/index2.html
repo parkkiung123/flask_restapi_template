@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>画像処理（グレースケール & 顔抽出）</title>
+</head>
+<body>
+  <h2>オリジナル画像</h2>
+  <input type="file" id="imageInput" accept="image/*"><br>
+  <img id="original-image" src="" alt="オリジナル画像" style="max-width: 300px; display: none;"><br><br>
+
+  <!-- 処理ボタン -->
+  <button id="convertButton">グレースケール変換</button>
+  <button id="faceButton">顔抽出</button>
+
+  <!-- 処理結果表示 -->
+  <h2 id="result-title">変換後の画像</h2>
+  <img id="result-image" src="" alt="処理画像" style="max-width: 300px; display: none;"><br>
+
+  <script>
+    const imageInput = document.getElementById('imageInput');
+    const originalImage = document.getElementById('original-image');
+    const resultImage = document.getElementById('result-image');
+    const resultTitle = document.getElementById('result-title');
+    const convertButton = document.getElementById('convertButton');
+    const faceButton = document.getElementById('faceButton');
+
+    let base64Image = '';
+
+    // 画像ファイルを読み込んでbase64に変換
+    imageInput.addEventListener('change', () => {
+      const file = imageInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          base64Image = e.target.result.split(',')[1];
+          originalImage.src = e.target.result;
+          originalImage.style.display = 'block';
+          resultImage.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 共通処理関数
+    function processImage(apiUrl, titleText) {
+      if (!base64Image) {
+        alert('画像を選択してください。');
+        return;
+      }
+
+      fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Image })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.image) {
+          resultTitle.textContent = titleText;
+          resultImage.src = 'data:image/jpeg;base64,' + data.image;
+          resultImage.style.display = 'block';
+        } else {
+          alert(`${titleText} に失敗しました。`);
+        }
+      })
+      .catch(error => {
+        console.error('エラー:', error);
+        alert('通信エラーが発生しました。');
+      });
+    }
+
+    // 各ボタンに処理を割り当て
+    convertButton.addEventListener('click', () => {
+      processImage('http://localhost:5000/api/v1/image/gray/base64', 'グレースケール画像');
+    });
+
+    faceButton.addEventListener('click', () => {
+      processImage('http://localhost:5000/api/v1/image/cropFace/base64', '抽出された顔画像');
+    });
+  </script>
+</body>
+</html>
