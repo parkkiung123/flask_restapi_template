@@ -17,6 +17,7 @@ class UserList(MethodView):
     @jwt_required()
     @bp.response(200, UserSchema(many=True))
     def get(self):
+        """保護されたルート（JWT 必須）"""
         user_id = get_jwt_identity()
         current_app.logger.info(f"アクセス中のユーザーID: {user_id}")
         return User.query.all()
@@ -27,6 +28,7 @@ class UserAdd(MethodView):
     @bp.arguments(UserSchema)
     @bp.response(201, UserSchema)
     def post(self, data):
+        """保護されたルート（JWT 必須）"""
         # パスワードをハッシュ化
         hashed_pw = bcrypt.hashpw(data["userpass"].encode("utf-8"), bcrypt.gensalt())
         data["userpass"] = hashed_pw.decode("utf-8")  # デコードして文字列として保存
