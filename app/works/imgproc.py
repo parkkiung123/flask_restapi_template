@@ -4,19 +4,51 @@ import cv2
 import numpy as np
 import mediapipe as mp  # type:ignore
 from mediapipe.tasks import python  # type:ignore
-from mediapipe.tasks.python import vision  # type:ignore
-from app.works.utils.cvfpscalc import CvFpsCalc
+from mediapipe.tasks.python import vision
 from app.works.utils.download_file import download_file
+
+use_tensorflow = True
+if use_tensorflow:
+    from keras_facenet import FaceNet
 
 class ImgProcessor:
     def __init__(self):
         self.init_face_detector()
+        if use_tensorflow:
+            self.init_face_similarity()
+        else:
+            self.facenet_model = None
 
     def get_grayscale(self, stream):
         return self.process(stream, grayscale=True)
 
     def get_face_crop(self, stream):
         return self.process(stream, face_crop=True)
+    
+    def get_face_similarity(self, stream1, stream2):
+        if self.facenet_model is None:
+            raise ValueError("Face similarity model is not initialized.")
+
+        frame1 = self.pre_process(stream1)
+        frame2 = self.pre_process(stream2)
+
+        # 顔の検出
+        face1 = self.face_crop(frame1)
+        face2 = self.face_crop(frame2)
+
+        if face1 is None or face2 is None:
+            return None
+
+        # 顔の類似度計算
+        face1_embedding = self.facenet_model.embeddings(np.expand_dims(face1, axis=0))
+        face2_embedding = self.facenet_model.embeddings(np.expand_dims(face2, axis=0))
+
+        # コサイン類似度を計算
+        similarity = np.dot(face1_embedding, face2_embedding.T) / (
+            np.linalg.norm(face1_embedding) * np.linalg.norm(face2_embedding)
+        )
+
+        return similarity[0][0]
 
     def init_face_detector(self):
         print("Initializing Face Detector...")
@@ -35,8 +67,12 @@ class ImgProcessor:
         base_options = python.BaseOptions(model_asset_path=model_path)
         options = vision.FaceDetectorOptions(base_options=base_options, )
         self.detector = vision.FaceDetector.create_from_options(options)
-        # FPS計測モジュール
-        self.cvFpsCalc = CvFpsCalc(buffer_len=10)
+        print("Face Detector initialized.")
+
+    def init_face_similarity(self):
+        print("Initializing Face Similarity...")
+        self.facenet_model = FaceNet()
+        print("Face Similarity initialized.")
 
     def pre_process(self, stream):
         # バイナリからNumPy配列に変換

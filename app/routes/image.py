@@ -7,7 +7,7 @@ from flask.views import MethodView
 from flask_smorest import Blueprint
 from werkzeug.utils import secure_filename
 
-from app.schemas.schemas import FileSchema, ImageBase64Schema
+from app.schemas.schemas import File2Schema, FileSchema, ImageBase64Schema
 from app.works.imgproc import ImgProcessor
 from app.routes.file_op import allowed_file
 
@@ -19,7 +19,8 @@ allowed_extensions = {"jpg", "jpeg", "bmp", "png", "gif"}
 # 処理種別マッピング
 PROCESSORS = {
     "GrayScale": shared_img_processor.get_grayscale,
-    "CropFace": shared_img_processor.get_face_crop
+    "CropFace": shared_img_processor.get_face_crop,
+    "FaceSimilarity": shared_img_processor.get_face_similarity
 }
 
 # multipart/form-data 用 schema 記述
@@ -145,3 +146,37 @@ class CropFaceImageBase64(MethodView):
     @bp.arguments(ImageBase64Schema)
     def post(self, data):
         return process_image_response(data["image"], self.__class__.__name__, is_base64=True)
+
+@bp.route("/similarity")
+class FaceSimilarityImage(MethodView):
+    @bp.doc(description="2つのアップロード画像の顔類似度を計算", requestBody={
+        "content": {
+            "multipart/form-data": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "file": {
+                            "type": "string",
+                            "format": "binary",
+                            "description": "最初の画像ファイル"
+                        },
+                        "file2": {
+                            "type": "string",
+                            "format": "binary",
+                            "description": "比較対象の画像ファイル"
+                        }
+                    },
+                    "required": ["file", "file2"]
+                }
+            }
+        }
+    })
+    @bp.arguments(File2Schema, location="files")
+    def post(self, data):
+        file1 = data["file"]
+        file2 = data["file2"]
+        similarity = shared_img_processor.get_face_similarity(file1.stream, file2.stream)
+        if similarity is None:
+            return {"message": "顔が検出できませんでした"}, 400
+        
+        return {"similarity": float(similarity)}

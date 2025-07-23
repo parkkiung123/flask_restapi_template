@@ -22,6 +22,12 @@ class FileSchema(Schema):
         metadata={"description": "アップロードするファイル", "format": "binary"}
     )
 
+class File2Schema(FileSchema):
+    file2 = fields.Raw(
+        required=True,
+        metadata={"description": "2つ目のアップロードファイル", "format": "binary"}
+    )
+
 class ImageBase64Schema(Schema):
     image = fields.String(
         required=True,
