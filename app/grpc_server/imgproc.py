@@ -2,24 +2,16 @@
 import os
 import cv2
 import numpy as np
-from app.works.utils.download_file import download_file
-
-# 処理が重くなるため、Falseにしておく、普段は画像処理を使わないとする
-use_tensorflow = False
-if use_tensorflow:    
-    import mediapipe as mp  # type:ignore
-    from mediapipe.tasks import python  # type:ignore
-    from mediapipe.tasks.python import vision
-    from keras_facenet import FaceNet
+from app.grpc_server.utils import download_file
+import mediapipe as mp  # type:ignore
+from mediapipe.tasks import python  # type:ignore
+from mediapipe.tasks.python import vision
+from keras_facenet import FaceNet
 
 class ImgProcessor:
     def __init__(self):
-        if use_tensorflow:            
-            self.init_face_detector()
-            self.init_face_similarity()
-        else:
-            self.detector = None
-            self.facenet_model = None
+        self.init_face_detector()
+        self.init_face_similarity()
 
     def get_grayscale(self, stream):
         return self.process(stream, grayscale=True)

@@ -31,3 +31,19 @@ curl.exe -X POST http://localhost:5000/api/v1/sensor/add -H "Content-Type: appli
 pytest -v
 pytest app/tests/test_sensor.py
 pytest app/tests/test_sensor.py::test_get_list
+
+# grpcコードの作成 (画像処理用)
+python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. image.proto
+
+# pythonのキャッシュ削除
+Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force
+Get-ChildItem -Recurse -Include *.pyc | Remove-Item -Force
+
+# 一時的にPowerShellを管理者として実行
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# 仮想環境
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install --upgrade pip
+pip install -r requirements.txt

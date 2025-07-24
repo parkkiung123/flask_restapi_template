@@ -1,0 +1,25 @@
+syntax = "proto3";
+package image;
+
+service ImageProcessor {
+  rpc GetGray (ImageRequest) returns (ImageResponse);
+  rpc GetCropFace (ImageRequest) returns (ImageResponse);
+  rpc GetFaceSimilarity (FaceSimilarityRequest) returns (FaceSimilarityResponse);
+}
+
+message ImageRequest {
+  bytes image = 1;
+}
+
+message ImageResponse {
+  bytes image = 1;
+}
+
+message FaceSimilarityRequest {
+  bytes image1 = 1;
+  bytes image2 = 2;
+}
+
+message FaceSimilarityResponse {
+  float similarity = 1;
+}

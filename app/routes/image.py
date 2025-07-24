@@ -1,27 +1,22 @@
 import base64
 import io
-import cv2
-import numpy as np
-from flask import jsonify, send_file, abort, current_app
+from flask import jsonify, send_file, abort
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from werkzeug.utils import secure_filename
-
 from app.schemas.schemas import File2Schema, FileSchema, ImageBase64Schema
-from app.works.imgproc import ImgProcessor
 from app.routes.file_op import allowed_file
+import grpc
+from app.grpc_server import image_pb2, image_pb2_grpc
 
 bp = Blueprint("image", __name__, description="画像処理API")
-
-shared_img_processor = ImgProcessor()
 allowed_extensions = {"jpg", "jpeg", "bmp", "png", "gif"}
 
-# 処理種別マッピング
-PROCESSORS = {
-    "GrayScale": shared_img_processor.get_grayscale,
-    "CropFace": shared_img_processor.get_face_crop,
-    "FaceSimilarity": shared_img_processor.get_face_similarity
-}
+channel = grpc.insecure_channel("localhost:50051")
+stub = image_pb2_grpc.ImageProcessorStub(channel)
+def grpc_request_image(route, image_bytes):
+    req = image_pb2.ImageRequest(image=image_bytes)
+    return getattr(stub, route)(req)
 
 # multipart/form-data 用 schema 記述
 req_body_schema = {
@@ -42,92 +37,53 @@ req_body_schema = {
     }
 }
 
-# 画像処理を実行
-def get_processed_frame(stream, class_name: str):
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+def extract_base_name(class_name):
     idx = class_name.find("Image")
-    base_name = class_name[:idx] if idx != -1 else class_name 
-    processor = PROCESSORS.get(base_name)
-    if not processor:
-        abort(400, description="不明な処理です")
-    return processor(stream)
+    return class_name[:idx] if idx != -1 else class_name
 
-# OpenCV画像をBase64に変換
-def image_to_base64(image, ext="jpg"):
-    success, buffer = cv2.imencode(f".{ext}", image)
-    if not success:
-        raise ValueError("画像のエンコードに失敗しました")
-    return base64.b64encode(buffer.tobytes()).decode("utf-8")
+def get_new_filename(original_name, class_name, ext=None):
+    base_name = extract_base_name(class_name)
+    name, orig_ext = original_name.rsplit('.', 1)
+    return f"{secure_filename(name)}_{base_name}.{ext or orig_ext.lower()}"
 
-# base64をOpenCV画像に変換
-def base64_to_image(image_base64: str):
+def process_image_response(image_input, class_name, is_base64=False):
+    if is_base64:
+        try:
+            image_bytes = base64.b64decode(image_input)
+        except Exception:
+            abort(400, description="base64のデコードに失敗しました")
+    else:
+        if not allowed_file(image_input.filename):
+            return {"message": "許可されていないファイル形式です"}, 400
+        image_bytes = image_input.read()
+        filename = image_input.filename
+
+    # 処理種別を class_name から決定
+    method = f"Get{extract_base_name(class_name)}"
     try:
-        img_data = base64.b64decode(image_base64)
-        np_arr = np.frombuffer(img_data, np.uint8)
-        return cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-    except Exception as e:
-        current_app.logger.error(f"base64デコードエラー: {e}")
-        return None
+        res = grpc_request_image(method, image_bytes)
+    except grpc.RpcError as e:
+        abort(400, description=e.details())
 
-# ファイル or base64 による画像処理レスポンス
-def process_image_response(image_input, class_name: str, is_base64=False):
-    try:
-        if is_base64:
-            frame = base64_to_image(image_input)
-            if frame is None:
-                return {"message": "画像の読み込みに失敗しました"}, 400
-            # メモリストリームに変換
-            _, img_bytes = cv2.imencode(".jpg", frame)
-            stream = io.BytesIO(img_bytes.tobytes())
-        else:
-            file = image_input
-            if not allowed_file(file.filename, allowed_extensions):
-                return {"message": "許可されていないファイル形式です"}, 400
-            stream = file.stream
-
-        # 処理実行
-        result_frame = get_processed_frame(stream, class_name)
-        if result_frame is None:
-            return {"message": "画像処理に失敗しました"}, 400
-
-        if is_base64:
-            frame_b64 = image_to_base64(result_frame, "jpg")
-            return jsonify({"image": frame_b64})
-        else:
-            ext = image_input.filename.rsplit(".", 1)[1].lower()
-            ext = "jpg" if ext == "jpeg" else ext
-            encode_ext = f".{ext}"
-
-            success, buffer = cv2.imencode(encode_ext, result_frame)
-            if not success:
-                raise ValueError("画像のエンコードに失敗しました")
-            img_io = io.BytesIO(buffer.tobytes())
-
-            base_name = class_name.replace("Image", "").lower()
-            filename = secure_filename(image_input.filename)
-            name, _ = filename.rsplit(".", 1)
-            new_filename = f"{name}_{base_name}.{ext}"
-
-            return send_file(
-                img_io,
-                mimetype=f"image/{ext}",
-                as_attachment=True,
-                download_name=new_filename
-            )
-    except Exception as e:
-        current_app.logger.error(f"画像処理エラー ({class_name}): {e}")
-        return {"message": "画像処理中にエラーが発生しました"}, 500
-
-# ========== API 定義 ==========
+    if is_base64:
+        encoded = base64.b64encode(res.image).decode('utf-8')
+        return jsonify({"image": encoded})
+    else:
+        new_filename = get_new_filename(filename, class_name, ext="jpg")
+        return send_file(io.BytesIO(res.image), mimetype='image/jpeg', as_attachment=True, download_name=new_filename)
 
 @bp.route("/gray")
-class GrayScaleImage(MethodView):
+class GrayImage(MethodView):
     @bp.doc(description="アップロード画像をグレースケール変換", requestBody=req_body_schema)
     @bp.arguments(FileSchema, location="files")
     def post(self, data):
-        return process_image_response(data["file"], self.__class__.__name__, is_base64=False)
+        return process_image_response(data["file"], self.__class__.__name__)
 
 @bp.route("/gray/base64")
-class GrayScaleImageBase64(MethodView):
+class GrayImageBase64(MethodView):
     @bp.doc(description="base64画像をグレースケール変換")
     @bp.arguments(ImageBase64Schema)
     def post(self, data):
@@ -138,7 +94,7 @@ class CropFaceImage(MethodView):
     @bp.doc(description="アップロード画像から顔を抽出", requestBody=req_body_schema)
     @bp.arguments(FileSchema, location="files")
     def post(self, data):
-        return process_image_response(data["file"], self.__class__.__name__, is_base64=False)
+        return process_image_response(data["file"], self.__class__.__name__)
 
 @bp.route("/cropFace/base64")
 class CropFaceImageBase64(MethodView):
@@ -173,10 +129,11 @@ class FaceSimilarityImage(MethodView):
     })
     @bp.arguments(File2Schema, location="files")
     def post(self, data):
-        file1 = data["file"]
-        file2 = data["file2"]
-        similarity = shared_img_processor.get_face_similarity(file1.stream, file2.stream)
-        if similarity is None:
-            return {"message": "顔が検出できませんでした"}, 400
-        
-        return {"similarity": float(similarity)}
+        f1 = data["file"].read()
+        f2 = data["file2"].read()
+        req = image_pb2.FaceSimilarityRequest(image1=f1, image2=f2)
+        try:
+            res = stub.GetFaceSimilarity(req)
+        except grpc.RpcError as e:
+            abort(400, description=e.details())
+        return jsonify({"similarity": res.similarity})

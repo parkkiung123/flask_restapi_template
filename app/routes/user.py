@@ -1,14 +1,14 @@
 import cv2
-from flask import current_app, request
+from flask import abort, current_app, request
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.routes.image import shared_img_processor
 from app.schemas.schemas import UserListResScheme, UserSchema
 from app.models.models import User
 from app.extensions import db
-import io
+import grpc
 import bcrypt
+from app.routes.image import grpc_request_image
 
 bp = Blueprint("user", __name__, description="ユーザーAPI")
 
@@ -37,15 +37,16 @@ class UserAdd(MethodView):
         # ファイルは request.files から取り出す
         file = request.files.get('facephoto')
         if file:
-            photo_arr = shared_img_processor.get_face_crop(file.stream)
-            if photo_arr is None:
+            try:
+                image_bytes = file.read()
+                res = grpc_request_image("GetCropFace", image_bytes)
+            except grpc.RpcError as e:
+                abort(400, description=e.details())
+            byteArr = res.image
+            if byteArr is None:
                 photo_data = None
             else:
-                success, encoded_image = cv2.imencode('.png', photo_arr)
-                if not success:
-                    raise ValueError("画像のエンコードに失敗しました")
-                else:
-                    photo_data = encoded_image
+                photo_data = byteArr
         else:
             photo_data = None
 
