@@ -1,1 +1,0 @@
-python -m app.grpc_server.server

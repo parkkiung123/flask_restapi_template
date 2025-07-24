@@ -1,10 +1,11 @@
 import os
 from app.models.models import User
-from app.extensions import db
 import io
 
+service_name = "user"
+
 def test_user_list(client, api_prefix, access_token):
-    url = f"{api_prefix}/user/list"
+    url = f"{api_prefix}/{service_name}/list"
 
     response = client.get(url, headers={
         "Authorization": f"Bearer {access_token}"
@@ -16,7 +17,7 @@ def test_user_list(client, api_prefix, access_token):
     assert any(u["userid"] == "testuser" for u in json_data)
 
 def test_add_user(client, api_prefix, test_image_path):
-    url = f"{api_prefix}/user/add"
+    url = f"{api_prefix}/{service_name}/add"
     test_image_name = os.path.basename(test_image_path)
 
     with open(test_image_path, "rb") as f:

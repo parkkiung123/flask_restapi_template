@@ -1,6 +1,6 @@
 # app/routes/file.py
-
 import os
+from PIL import Image
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from flask import current_app
@@ -25,6 +25,16 @@ def save_file(file, subfolder, allowed_extensions):
 
     filepath = os.path.join(upload_folder, filename)
     file.save(filepath)
+
+    # 画像サブフォルダの場合は画像として有効かチェック
+    if subfolder == "image":
+        try:
+            with Image.open(filepath) as img:
+                img.verify()  # 画像の整合性チェック
+        except Exception:
+            # 画像として無効ならファイルを削除してエラーを返す
+            os.remove(filepath)
+            return {"message": "無効な画像ファイルです"}, 400
 
     return {"message": "アップロード成功", "filename": filename}, 201
 

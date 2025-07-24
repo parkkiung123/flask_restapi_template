@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from app import db
 from app.models.models import Sensor, SensorType
 
+service_name = "sensor"
+
 @pytest.fixture
 def sample_sensor(app):
     sensor = Sensor(
@@ -17,7 +19,7 @@ def sample_sensor(app):
     return sensor
 
 def test_get_list(client, api_prefix, sample_sensor):
-    url = f"{api_prefix}/sensor/list"
+    url = f"{api_prefix}/{service_name}/list"
     res = client.get(url)
     assert res.status_code == 200
     json_data = res.get_json()
@@ -25,7 +27,7 @@ def test_get_list(client, api_prefix, sample_sensor):
     assert any(s["id"] == sample_sensor.id for s in json_data)
 
 def test_get_all_by_device(client, api_prefix, sample_sensor):
-    url = f"{api_prefix}/sensor/getAll/{sample_sensor.device_id}"
+    url = f"{api_prefix}/{service_name}/getAll/{sample_sensor.device_id}"
     res = client.get(url)
     assert res.status_code == 200
     json_data = res.get_json()
@@ -34,7 +36,7 @@ def test_get_all_by_device(client, api_prefix, sample_sensor):
 
 def test_get_data_by_device_with_dataNum(client, api_prefix, sample_sensor):
     dataNum = 1
-    url = f"{api_prefix}/sensor/get/{sample_sensor.device_id}/{dataNum}"
+    url = f"{api_prefix}/{service_name}/get/{sample_sensor.device_id}/{dataNum}"
     res = client.get(url)
     assert res.status_code == 200
     json_data = res.get_json()
@@ -43,7 +45,7 @@ def test_get_data_by_device_with_dataNum(client, api_prefix, sample_sensor):
     assert any(s["id"] == sample_sensor.id for s in json_data)
 
 def test_add_sensor(client, api_prefix, access_token):
-    url = f"{api_prefix}/sensor/add"
+    url = f"{api_prefix}/{service_name}/add"
     new_sensor_data = {
         "device_id": "test_device_001",
         "type": "temperature",
@@ -66,7 +68,7 @@ def test_add_sensor(client, api_prefix, access_token):
     assert json_data["status"] == new_sensor_data["status"]
 
 def test_get_by_id(client, api_prefix, sample_sensor):
-    url = f"{api_prefix}/sensor/getById/{sample_sensor.id}"
+    url = f"{api_prefix}/{service_name}/getById/{sample_sensor.id}"
     print(f"Request URL: {url}")
     res = client.get(url)
     assert res.status_code == 200
@@ -75,7 +77,7 @@ def test_get_by_id(client, api_prefix, sample_sensor):
     assert json_data["device_id"] == "dev123"
 
 def test_get_by_id_not_found(client, api_prefix):
-    url = f"{api_prefix}/sensor/getById/9999"
+    url = f"{api_prefix}/{service_name}/getById/9999"
     res = client.get(url)
     assert res.status_code == 404
 
@@ -87,7 +89,7 @@ def test_update_sensor(client, api_prefix, sample_sensor):
         "timestamp": datetime.utcnow().isoformat(),
         "status": 0
     }
-    url = f"{api_prefix}/sensor/update/{sample_sensor.id}"
+    url = f"{api_prefix}/{service_name}/update/{sample_sensor.id}"
     res = client.put(url, json=update_data)
     assert res.status_code == 200
     json_data = res.get_json()
@@ -96,7 +98,7 @@ def test_update_sensor(client, api_prefix, sample_sensor):
     assert json_data["status"] == 0
 
 def test_delete_sensor(client, api_prefix, sample_sensor):
-    url = f"{api_prefix}/sensor/delete/{sample_sensor.id}"
+    url = f"{api_prefix}/{service_name}/delete/{sample_sensor.id}"
     res = client.delete(url)
     assert res.status_code == 204
     # 削除後に取得しようとすると404
@@ -106,7 +108,7 @@ def test_delete_sensor(client, api_prefix, sample_sensor):
 def test_get_by_date_range(client, api_prefix, sample_sensor):
     start = (datetime.utcnow() - timedelta(days=1)).isoformat()
     end = (datetime.utcnow() + timedelta(days=1)).isoformat()
-    url = f"{api_prefix}/sensor/getByDateRange/{sample_sensor.device_id}?start={start}&end={end}"
+    url = f"{api_prefix}/{service_name}/getByDateRange/{sample_sensor.device_id}?start={start}&end={end}"
     res = client.get(url)
     assert res.status_code == 200
     json_data = res.get_json()
@@ -114,7 +116,7 @@ def test_get_by_date_range(client, api_prefix, sample_sensor):
     assert json_data[0]["device_id"] == sample_sensor.device_id
 
 def test_get_latest(client, api_prefix, sample_sensor):
-    url = f"{api_prefix}/sensor/getLatest/{sample_sensor.device_id}"
+    url = f"{api_prefix}/{service_name}/getLatest/{sample_sensor.device_id}"
     res = client.get(url)
     assert res.status_code == 200
     json_data = res.get_json()
@@ -122,7 +124,7 @@ def test_get_latest(client, api_prefix, sample_sensor):
 
 def test_get_by_status(client, api_prefix, sample_sensor):
     status = sample_sensor.status
-    url = f"{api_prefix}/sensor/getByStatus/{sample_sensor.device_id}/{status}"
+    url = f"{api_prefix}/{service_name}/getByStatus/{sample_sensor.device_id}/{status}"
     res = client.get(url)
     assert res.status_code == 200
     json_data = res.get_json()
@@ -130,13 +132,13 @@ def test_get_by_status(client, api_prefix, sample_sensor):
 
 def test_get_by_type(client, api_prefix, sample_sensor):
     sensor_type = sample_sensor.type.value
-    url = f"{api_prefix}/sensor/getByType/{sample_sensor.device_id}/{sensor_type}"
+    url = f"{api_prefix}/{service_name}/getByType/{sample_sensor.device_id}/{sensor_type}"
     res = client.get(url)
     assert res.status_code == 200
     json_data = res.get_json()
     assert all(s["type"] == sensor_type for s in json_data)
 
 def test_get_by_type_invalid(client, api_prefix, sample_sensor):
-    url = f"{api_prefix}/sensor/getByType/{sample_sensor.device_id}/invalid_type"
+    url = f"{api_prefix}/{service_name}/getByType/{sample_sensor.device_id}/invalid_type"
     res = client.get(url)
     assert res.status_code == 400

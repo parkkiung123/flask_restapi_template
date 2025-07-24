@@ -35,6 +35,9 @@ pytest app/tests/test_sensor.py::test_get_list
 # grpcコードの作成 (画像処理用)
 python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. image.proto
 
+# grpcサーバーの起動
+python -m app.grpc_server.server
+
 # pythonのキャッシュ削除
 Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force
 Get-ChildItem -Recurse -Include *.pyc | Remove-Item -Force
