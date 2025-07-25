@@ -1,6 +1,6 @@
 import base64
 import io
-from flask import jsonify, send_file, abort
+from flask import json, jsonify, send_file, abort
 from flask.views import MethodView
 from flask_smorest import Blueprint
 from werkzeug.utils import secure_filename
@@ -19,23 +19,25 @@ def grpc_request_image(route, image_bytes):
     return getattr(stub, route)(req)
 
 # multipart/form-data 用 schema 記述
-req_body_schema = {
-    "content": {
-        "multipart/form-data": {
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "file": {
-                        "type": "string",
-                        "format": "binary",
-                        "description": "顔を含む画像ファイル"
-                    }
-                },
-                "required": ["file"]
+def get_req_body_schema(description):
+    req_body_schema = {
+        "content": {
+            "multipart/form-data": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "file": {
+                            "type": "string",
+                            "format": "binary",
+                            "description": f"{description}"
+                        }
+                    },
+                    "required": ["file"]
+                }
             }
         }
     }
-}
+    return req_body_schema
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
@@ -77,7 +79,7 @@ def process_image_response(image_input, class_name, is_base64=False):
 
 @bp.route("/gray")
 class GrayImage(MethodView):
-    @bp.doc(description="アップロード画像をグレースケール変換", requestBody=req_body_schema)
+    @bp.doc(description="アップロード画像をグレースケール変換", requestBody=get_req_body_schema("顔を含む画像ファイル"))
     @bp.arguments(FileSchema, location="files")
     def post(self, data):
         return process_image_response(data["file"], self.__class__.__name__)
@@ -91,7 +93,7 @@ class GrayImageBase64(MethodView):
 
 @bp.route("/cropFace")
 class CropFaceImage(MethodView):
-    @bp.doc(description="アップロード画像から顔を抽出", requestBody=req_body_schema)
+    @bp.doc(description="アップロード画像から顔を抽出", requestBody=get_req_body_schema("顔を含む画像ファイル"))
     @bp.arguments(FileSchema, location="files")
     def post(self, data):
         return process_image_response(data["file"], self.__class__.__name__)
@@ -137,3 +139,48 @@ class FaceSimilarityImage(MethodView):
         except grpc.RpcError as e:
             abort(400, description=e.details())
         return jsonify({"similarity": res.similarity})
+
+@bp.route("/kotenOCR")
+class KotenOCRImage(MethodView):
+    @bp.doc(description="アップロードの古典籍の画像から文字認識", requestBody=get_req_body_schema("古典籍の画像ファイル"))
+    @bp.arguments(FileSchema, location="files")
+    def post(self, data):
+        f = data["file"].read()
+        req = image_pb2.KotenOCR_Response(image=f)
+        try:
+            res = stub.GetKotenOCR(req)
+        except grpc.RpcError as e:
+            abort(400, description=e.details())
+
+        base64_image = base64.b64encode(res.image).decode('utf-8')
+
+        return jsonify({
+            "image": base64_image,        # base64文字列
+            "xml": res.xml,
+            "json": res.json,
+            "text": res.text
+        })
+    
+@bp.route("/kotenOCR/base64")
+class KotenOCRImageBase64(MethodView):
+    @bp.doc(description="アップロードの古典籍の画像から文字認識", requestBody=get_req_body_schema("古典籍の画像ファイル"))
+    @bp.arguments(ImageBase64Schema)
+    def post(self, data):
+        try:            
+            image_bytes = base64.b64decode(data["image"])
+        except Exception:
+            abort(400, description="base64のデコードに失敗しました")
+        method = f"Get{extract_base_name(self.__class__.__name__)}"
+        try:
+            res = grpc_request_image(method, image_bytes)
+        except grpc.RpcError as e:
+            abort(400, description=e.details())
+
+        base64_image = base64.b64encode(res.image).decode('utf-8')
+
+        return jsonify({
+            "image": base64_image,        # base64文字列
+            "xml": res.xml,
+            "json": res.json,
+            "text": res.text
+        })

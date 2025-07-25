@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bimage.proto\x12\x05image\"\x1d\n\x0cImageRequest\x12\r\n\x05image\x18\x01 \x01(\x0c\"\x1e\n\rImageResponse\x12\r\n\x05image\x18\x01 \x01(\x0c\"7\n\x15\x46\x61\x63\x65SimilarityRequest\x12\x0e\n\x06image1\x18\x01 \x01(\x0c\x12\x0e\n\x06image2\x18\x02 \x01(\x0c\",\n\x16\x46\x61\x63\x65SimilarityResponse\x12\x12\n\nsimilarity\x18\x01 \x01(\x02\x32\xd2\x01\n\x0eImageProcessor\x12\x34\n\x07GetGray\x12\x13.image.ImageRequest\x1a\x14.image.ImageResponse\x12\x38\n\x0bGetCropFace\x12\x13.image.ImageRequest\x1a\x14.image.ImageResponse\x12P\n\x11GetFaceSimilarity\x12\x1c.image.FaceSimilarityRequest\x1a\x1d.image.FaceSimilarityResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0bimage.proto\x12\x05image\"\x1d\n\x0cImageRequest\x12\r\n\x05image\x18\x01 \x01(\x0c\"\x1e\n\rImageResponse\x12\r\n\x05image\x18\x01 \x01(\x0c\"7\n\x15\x46\x61\x63\x65SimilarityRequest\x12\x0e\n\x06image1\x18\x01 \x01(\x0c\x12\x0e\n\x06image2\x18\x02 \x01(\x0c\",\n\x16\x46\x61\x63\x65SimilarityResponse\x12\x12\n\nsimilarity\x18\x01 \x01(\x02\"K\n\x11KotenOCR_Response\x12\r\n\x05image\x18\x01 \x01(\x0c\x12\x0b\n\x03xml\x18\x02 \x01(\t\x12\x0c\n\x04text\x18\x03 \x01(\t\x12\x0c\n\x04json\x18\x04 \x01(\t2\x90\x02\n\x0eImageProcessor\x12\x34\n\x07GetGray\x12\x13.image.ImageRequest\x1a\x14.image.ImageResponse\x12\x38\n\x0bGetCropFace\x12\x13.image.ImageRequest\x1a\x14.image.ImageResponse\x12<\n\x0bGetKotenOCR\x12\x13.image.ImageRequest\x1a\x18.image.KotenOCR_Response\x12P\n\x11GetFaceSimilarity\x12\x1c.image.FaceSimilarityRequest\x1a\x1d.image.FaceSimilarityResponseb\x06proto3')
 
 
 
@@ -22,6 +22,7 @@ _IMAGEREQUEST = DESCRIPTOR.message_types_by_name['ImageRequest']
 _IMAGERESPONSE = DESCRIPTOR.message_types_by_name['ImageResponse']
 _FACESIMILARITYREQUEST = DESCRIPTOR.message_types_by_name['FaceSimilarityRequest']
 _FACESIMILARITYRESPONSE = DESCRIPTOR.message_types_by_name['FaceSimilarityResponse']
+_KOTENOCR_RESPONSE = DESCRIPTOR.message_types_by_name['KotenOCR_Response']
 ImageRequest = _reflection.GeneratedProtocolMessageType('ImageRequest', (_message.Message,), {
   'DESCRIPTOR' : _IMAGEREQUEST,
   '__module__' : 'image_pb2'
@@ -50,6 +51,13 @@ FaceSimilarityResponse = _reflection.GeneratedProtocolMessageType('FaceSimilarit
   })
 _sym_db.RegisterMessage(FaceSimilarityResponse)
 
+KotenOCR_Response = _reflection.GeneratedProtocolMessageType('KotenOCR_Response', (_message.Message,), {
+  'DESCRIPTOR' : _KOTENOCR_RESPONSE,
+  '__module__' : 'image_pb2'
+  # @@protoc_insertion_point(class_scope:image.KotenOCR_Response)
+  })
+_sym_db.RegisterMessage(KotenOCR_Response)
+
 _IMAGEPROCESSOR = DESCRIPTOR.services_by_name['ImageProcessor']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
@@ -62,6 +70,8 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _FACESIMILARITYREQUEST._serialized_end=140
   _FACESIMILARITYRESPONSE._serialized_start=142
   _FACESIMILARITYRESPONSE._serialized_end=186
-  _IMAGEPROCESSOR._serialized_start=189
-  _IMAGEPROCESSOR._serialized_end=399
+  _KOTENOCR_RESPONSE._serialized_start=188
+  _KOTENOCR_RESPONSE._serialized_end=263
+  _IMAGEPROCESSOR._serialized_start=266
+  _IMAGEPROCESSOR._serialized_end=538
 # @@protoc_insertion_point(module_scope)

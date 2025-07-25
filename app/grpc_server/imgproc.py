@@ -1,7 +1,13 @@
 # webcam_sub.py
+import argparse
+import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 import os
 import cv2
 import numpy as np
+from app.grpc_server.kotenOCR import ocr
+from app.grpc_server.kotenOCR.ndl_parser import convert_to_xml_string3_custom
+from app.grpc_server.kotenOCR.reading_order.xy_cut.eval import eval_xml
 from app.grpc_server.utils import download_file
 import mediapipe as mp  # type:ignore
 from mediapipe.tasks import python  # type:ignore
@@ -12,6 +18,7 @@ class ImgProcessor:
     def __init__(self):
         self.init_face_detector()
         self.init_face_similarity()
+        self.init_kotenOCR_model()
 
     def get_grayscale(self, stream):
         return self.process(stream, grayscale=True)
@@ -43,6 +50,82 @@ class ImgProcessor:
         )
 
         return similarity[0][0]
+    
+    def get_koten_orc_result(self, stream):
+        try:
+            
+            tatelinecnt=0
+            alllinecnt=0
+            npimg = self.pre_process(stream)
+
+            allxmlstr="<OCRDATASET>\n"
+            alltextlist=[]
+            resjsonarray=[]
+
+            img_h,img_w=npimg.shape[:2]
+            detections,classeslist,pil_image=ocr.inference_on_detector_custom(self.detector,npimage=npimg)
+            
+            resultobj=[dict(),dict()]
+            resultobj[0][0]=list()
+            for i in range(16):
+                resultobj[1][i]=[]
+            for det in detections:
+                xmin,ymin,xmax,ymax=det["box"]
+                conf=det["confidence"]
+                if det["class_index"]==0:
+                    resultobj[0][0].append([xmin,ymin,xmax,ymax])
+                resultobj[1][det["class_index"]].append([xmin,ymin,xmax,ymax,conf])
+
+            xmlstr=convert_to_xml_string3_custom(img_w, img_h, classeslist, resultobj,score_thr = 0.3,min_bbox_size= 5,use_block_ad= False)
+            xmlstr="<OCRDATASET>"+xmlstr+"</OCRDATASET>"
+            root = ET.fromstring(xmlstr)
+            eval_xml(root, logger=None)
+            targetdflist=[]
+            with ThreadPoolExecutor(max_workers=8, thread_name_prefix="thread") as executor:
+                for lineobj in root.findall(".//LINE"):
+                    xmin=int(lineobj.get("X"))
+                    ymin=int(lineobj.get("Y"))
+                    line_w=int(lineobj.get("WIDTH"))
+                    line_h=int(lineobj.get("HEIGHT"))
+                    if line_h>line_w:
+                        tatelinecnt+=1
+                    alllinecnt+=1
+                    lineimg=npimg[ymin:ymin+line_h,xmin:xmin+line_w,:]
+                    targetdflist.append(lineimg)
+                resultlines = executor.map(self.recognizer.read, targetdflist)
+                resultlines=list(resultlines)
+                alltextlist.append("\n".join(resultlines))
+                for idx,lineobj in enumerate(root.findall(".//LINE")):
+                    lineobj.set("STRING",resultlines[idx])
+                    xmin=int(lineobj.get("X"))
+                    ymin=int(lineobj.get("Y"))
+                    line_w=int(lineobj.get("WIDTH"))
+                    line_h=int(lineobj.get("HEIGHT"))
+                    try:
+                        conf=float(lineobj.get("CONF"))
+                    except:
+                        conf=0
+                    jsonobj={"boundingBox": [[xmin,ymin],[xmin,ymin+line_h],[xmin+line_w,ymin],[xmin+line_w,ymin+line_h]],
+                        "id": idx,"isVertical": "true","text": resultlines[idx],"isTextline": "true","confidence": conf}
+                    resjsonarray.append(jsonobj)
+            allxmlstr+=(ET.tostring(root.find("PAGE"), encoding='unicode')+"\n")
+            allxmlstr+="</OCRDATASET>"
+            if alllinecnt==0 or tatelinecnt/alllinecnt>0.5:
+                alltextlist=alltextlist[::-1]
+            alljsonobj={
+                "contents":[resjsonarray],
+                "imginfo": {
+                    "img_width": img_w,
+                    "img_height": img_h
+                }
+            }
+            npimg = np.array(pil_image)
+            return npimg, allxmlstr, alljsonobj, alltextlist
+        
+        except Exception as e:
+            # 必要ならログに出力
+            print(f"[ERROR] get_koten_orc_result failed: {e}")
+            return None
 
     def init_face_detector(self):
         print("Initializing Face Detector...")
@@ -67,6 +150,22 @@ class ImgProcessor:
         print("Initializing Face Similarity...")
         self.facenet_model = FaceNet()
         print("Face Similarity initialized.")
+
+    def init_kotenOCR_model(self):
+        print("Initializing kotenOCR model...")
+        parser = argparse.ArgumentParser(description="Argument for YOLOv9 Inference using ONNXRuntime")
+        parser.add_argument("--det-weights", type=str, required=False, help="Path to rtmdet onnx file", default="app/grpc_server/kotenOCR/model/rtmdet-s-1280x1280.onnx")
+        parser.add_argument("--det-classes", type=str, required=False, help="Path to list of class in yaml file",default="app/grpc_server/kotenOCR/config/ndl.yaml")
+        parser.add_argument("--det-score-threshold", type=float, required=False, default=0.3)
+        parser.add_argument("--det-conf-threshold", type=float, required=False, default=0.3)
+        parser.add_argument("--det-iou-threshold", type=float, required=False, default=0.3)
+        parser.add_argument("--rec-weights", type=str, required=False, help="Path to parseq-tiny onnx file", default="app/grpc_server/kotenOCR/model/parseq-ndl-32x384-tiny-10.onnx")
+        parser.add_argument("--rec-classes", type=str, required=False, help="Path to list of class in yaml file", default="app/grpc_server/kotenOCR/config/NDLmoji.yaml")
+        parser.add_argument("--device", type=str, required=False, help="Device use (cpu or cude)", choices=["cpu", "cuda"], default="cpu")
+        args = parser.parse_args()
+        self.recognizer = ocr.get_recognizer(args=args)
+        self.detector = ocr.get_detector(args=args)
+        print("KotenOCR model initialized.")
 
     def pre_process(self, stream):
         # バイナリからNumPy配列に変換

@@ -4,6 +4,7 @@ package image;
 service ImageProcessor {
   rpc GetGray (ImageRequest) returns (ImageResponse);
   rpc GetCropFace (ImageRequest) returns (ImageResponse);
+  rpc GetKotenOCR (ImageRequest) returns (KotenOCR_Response);
   rpc GetFaceSimilarity (FaceSimilarityRequest) returns (FaceSimilarityResponse);
 }
 
@@ -22,4 +23,11 @@ message FaceSimilarityRequest {
 
 message FaceSimilarityResponse {
   float similarity = 1;
+}
+
+message KotenOCR_Response {
+  bytes image = 1;
+  string xml = 2;
+  string json = 3;
+  string text = 4;
 }

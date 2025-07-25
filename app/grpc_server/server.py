@@ -1,5 +1,6 @@
 import io
 import cv2
+from flask import json
 import grpc
 from concurrent import futures
 from app.grpc_server import image_pb2, image_pb2_grpc
@@ -31,6 +32,18 @@ class ImageProcessorServicer(image_pb2_grpc.ImageProcessorServicer):
         if sim is None:
             return image_pb2.FaceSimilarityResponse(similarity=0.0)
         return image_pb2.FaceSimilarityResponse(similarity=sim)
+    
+    def GetKotenOCR(self, request, context):
+        npimg, allxmlstr, alljsonobj, alltextlist = handle_request_image(request.image, processor.get_koten_orc_result)
+        if npimg is None:
+            return image_pb2.KotenOCR_Response()
+        _, buf = cv2.imencode('.jpg', npimg)
+        return image_pb2.KotenOCR_Response(
+            image=buf.tobytes(),
+            xml=allxmlstr,
+            json=json.dumps(alljsonobj, ensure_ascii=False),  # dict → JSON string
+            text="\n".join(alltextlist)  # list → string
+        )
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))

@@ -78,3 +78,41 @@ def test_invalid_base64(client, api_prefix):
     response = client.post(url, json={"image": "not_base64_data"})
 
     assert response.status_code in (400, 500)
+
+def test_koten_ocr_upload(client, api_prefix, test_image_path):
+    url = f"{api_prefix}/{service_name}/kotenOCR"
+    with open(test_image_path, "rb") as f:
+        data = {
+            "file": (f, "image.jpg")
+        }
+        response = client.post(url, content_type="multipart/form-data", data=data)
+
+    assert response.status_code in (200, 400)
+    if response.status_code == 200:
+        json_data = response.get_json()
+        assert "image" in json_data
+        assert "text" in json_data
+        assert "json" in json_data
+
+def test_koten_ocr_base64(client, api_prefix, test_image_path):
+    url = f"{api_prefix}/{service_name}/kotenOCR/base64"
+    image_b64 = load_image_base64(test_image_path)
+
+    response = client.post(url, json={"image": image_b64})
+
+    assert response.status_code in (200, 400)
+    if response.status_code == 200:
+        data = response.get_json()
+        assert data is not None
+        assert "image" in data
+        assert "json" in data
+        assert "text" in data
+        assert isinstance(data["image"], str)
+
+def test_koten_ocr_invalid_base64(client, api_prefix):
+    url = f"{api_prefix}/{service_name}/kotenOCR/base64"
+    response = client.post(url, json={"image": "invalid_base64"})
+
+    assert response.status_code in (400, 500)
+
+

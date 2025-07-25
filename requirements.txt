@@ -35,5 +35,17 @@ Werkzeug==2.3.8
 pytest==8.2.1
 pytest-cov==5.0.0
 
+# --- missing ---
 scipy==1.11.1
 tensorflow==2.8.1
+
+# --- kotenOCR ---
+dill==0.3.8
+lxml==5.2.2
+networkx==3.2.1
+onnxruntime==1.19.2
+ordered-set==4.1.0
+pyparsing==3.1.2
+PyYAML==6.0.1
+reportlab==4.2.5
+pypdfium2==4.30.0
