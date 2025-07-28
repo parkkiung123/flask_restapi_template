@@ -12,8 +12,10 @@ bp = Blueprint("auth", __name__, description="認証ルート")
 
 @bp.route("/login")
 class Login(MethodView):
+    @bp.doc(description="ユーザーログイン")
     @bp.arguments(LoginSchema)
-    @bp.response(200)
+    @bp.response(200, description="JWTトークンの返却に成功した場合")
+    @bp.alt_response(401, description="認証失敗（ユーザーが存在しない、またはパスワードが間違っている）")
     def post(self, data):
         userid = data["userid"]
         userpass = data["userpass"]

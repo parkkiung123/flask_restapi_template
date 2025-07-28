@@ -8,7 +8,7 @@ import numpy as np
 from app.grpc_server.kotenOCR import ocr
 from app.grpc_server.kotenOCR.ndl_parser import convert_to_xml_string3_custom
 from app.grpc_server.kotenOCR.reading_order.xy_cut.eval import eval_xml
-from app.grpc_server.utils import download_file
+from app.grpc_server.utils.download_file import download_file
 import mediapipe as mp  # type:ignore
 from mediapipe.tasks import python  # type:ignore
 from mediapipe.tasks.python import vision

@@ -28,24 +28,20 @@ def process_face_photo(file):
 
 @bp.route("/list")
 class UserList(MethodView):
-    """ユーザー一覧を取得"""
     @jwt_required()
+    @bp.doc(description="JWT が必要なユーザー一覧取得エンドポイント")
     @bp.response(200, UserListResScheme(many=True))
     def get(self):
-        """JWT が必要なユーザー一覧取得エンドポイント"""
         user_id = get_jwt_identity()
         current_app.logger.info(f"[UserList] アクセス中のユーザーID: {user_id}")
         return User.query.all()
 
 @bp.route("/add")
 class UserAdd(MethodView):
-    """新規ユーザー追加"""
-
+    @bp.doc(description="フォームからユーザー情報を受け取り、新規ユーザーを追加")
     @bp.arguments(UserSchema, location="form")  # フォーム送信
     @bp.response(201, UserSchema)
     def post(self, data):
-        """フォームからユーザー情報を受け取り、新規ユーザーを追加"""
-
         current_app.logger.debug(f"[UserAdd] 受信データ: {data}")
 
         # パスワードをハッシュ化

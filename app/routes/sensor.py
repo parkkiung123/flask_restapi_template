@@ -14,7 +14,6 @@ class SensorList(MethodView):
     @bp.doc(description="全センサーの一覧を取得します")  # ここでAPI説明を追加
     @bp.response(200, SensorSchema(many=True))
     def get(self):
-        # 全センサー一覧を返す
         sensors = Sensor.query.all()
         return sensors
     
@@ -81,10 +80,10 @@ class SensorGetDataByDevice(MethodView):
 @bp.route("/add")
 class SensorAdd(MethodView):
     @jwt_required()
+    @bp.doc(description="センサーデータを追加（JWT必須）")
     @bp.arguments(SensorSchema)
     @bp.response(201, SensorSchema)
     def post(self, data):
-        """保護されたルート（JWT 必須）"""
         sensor = Sensor(
             device_id=data["device_id"],
             type=SensorType(data["type"]),
@@ -99,6 +98,7 @@ class SensorAdd(MethodView):
 # --- /getById/<int:id> ---
 @bp.route("/getById/<int:id>")
 class SensorGetById(MethodView):
+    @bp.doc(description="ID指定(device_idではない)でセンサーデータ取得")
     @bp.response(200, SensorSchema)
     def get(self, id):
         sensor = db.session.get(Sensor, id)
@@ -109,6 +109,7 @@ class SensorGetById(MethodView):
 # --- /update/<int:id> ---
 @bp.route("/update/<int:id>")
 class SensorUpdate(MethodView):
+    @bp.doc(description="センサーデータを更新")
     @bp.arguments(SensorSchema)
     @bp.response(200, SensorSchema)
     def put(self, data, id):
@@ -129,6 +130,7 @@ class SensorUpdate(MethodView):
 @bp.route("/delete/<int:id>")
 class SensorDelete(MethodView):
     @bp.response(204)
+    @bp.doc(description="センサーデータを削除")
     def delete(self, id):
         sensor = db.session.get(Sensor, id)
         if not sensor:
@@ -141,6 +143,7 @@ class SensorDelete(MethodView):
 # --- /getByDateRange/<string:device_id> ---
 @bp.route("/getByDateRange/<string:device_id>")
 class SensorGetByDateRange(MethodView):
+    @bp.doc(description="日付範囲を指定してセンサーデータを取得")
     @bp.response(200, SensorSchema(many=True))
     def get(self, device_id):
         start_date = request.args.get("start")
@@ -169,6 +172,7 @@ class SensorGetByDateRange(MethodView):
 # --- /getLatest/<string:device_id> ---
 @bp.route("/getLatest/<string:device_id>")
 class SensorGetLatest(MethodView):
+    @bp.doc(description="最新のセンサーデータを1件取得")
     @bp.response(200, SensorSchema)
     def get(self, device_id):
         sensor = (
@@ -183,6 +187,7 @@ class SensorGetLatest(MethodView):
 # --- /getByStatus/<string:device_id>/<int:status> ---
 @bp.route("/getByStatus/<string:device_id>/<int:status>")
 class SensorGetByStatus(MethodView):
+    @bp.doc(description="デバイスとステータスでフィルターしたセンサー取得")
     @bp.response(200, SensorSchema(many=True))
     def get(self, device_id, status):
         sensors = Sensor.query.filter_by(device_id=device_id, status=status).all()
@@ -191,6 +196,7 @@ class SensorGetByStatus(MethodView):
 # --- /getByType/<string:device_id>/<string:type> ---
 @bp.route("/getByType/<string:device_id>/<string:type>")
 class SensorGetByType(MethodView):
+    @bp.doc(description="デバイスとタイプでフィルターしたセンサー取得")
     @bp.response(200, SensorSchema(many=True))
     def get(self, device_id, type):
         try:

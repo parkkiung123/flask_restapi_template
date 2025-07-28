@@ -12,7 +12,7 @@ Flask-SQLAlchemy==3.1.1
 
 # --- ORM / DB ---
 SQLAlchemy==2.0.29
-psycopg2-binary==2.9.9  # PostgreSQL 用（必要に応じて）
+psycopg2-binary==2.9.9 
 
 # --- gRPC ---
 grpcio==1.44.0

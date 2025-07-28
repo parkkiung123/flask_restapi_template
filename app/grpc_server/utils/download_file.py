@@ -1,3 +1,4 @@
+import os
 import time
 import requests  # type: ignore
 from tqdm import tqdm  # type: ignore
@@ -10,6 +11,9 @@ def download_file(
 ) -> None:
 
     print('Download:', save_path)
+
+    # 保存先ディレクトリがなければ作成
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
     for attempt in range(retries):
         try:
@@ -29,6 +33,7 @@ def download_file(
             return
         except requests.exceptions.RequestException as e:
             if attempt < retries - 1:
+                print(f"[Retry {attempt + 1}] {e}")
                 time.sleep(5)
             else:
-                raise
+                raise RuntimeError(f"Failed to download {url} after {retries} attempts") from e

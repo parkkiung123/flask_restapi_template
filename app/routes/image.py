@@ -81,12 +81,16 @@ def process_image_response(image_input, class_name, is_base64=False):
 class GrayImage(MethodView):
     @bp.doc(description="アップロード画像をグレースケール変換", requestBody=get_req_body_schema("顔を含む画像ファイル"))
     @bp.arguments(FileSchema, location="files")
+    @bp.response(200, description="変換後の画像（JPEG）をファイル形式で返します")
+    @bp.alt_response(400, description="ファイル形式エラーまたはgRPCエラー")
     def post(self, data):
         return process_image_response(data["file"], self.__class__.__name__)
 
 @bp.route("/gray/base64")
 class GrayImageBase64(MethodView):
     @bp.doc(description="base64画像をグレースケール変換")
+    @bp.response(200, description="変換後の画像をbase64文字列で返却")
+    @bp.alt_response(400, description="base64デコード失敗またはgRPCエラー")
     @bp.arguments(ImageBase64Schema)
     def post(self, data):
         return process_image_response(data["image"], self.__class__.__name__, is_base64=True)

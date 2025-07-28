@@ -62,6 +62,8 @@ class TextUpload(MethodView):
         }
     )
     @bp.arguments(FileSchema, location="files")
+    @bp.response(201, description="アップロード成功時のレスポンス")
+    @bp.alt_response(400, description="不正なファイル形式、またはファイル未指定")
     def post(self, data):
         file = data["file"]
         allowed = {"txt", "csv", "json"}
@@ -91,6 +93,8 @@ class ImageUpload(MethodView):
         }
     )
     @bp.arguments(FileSchema, location="files")
+    @bp.response(201, description="アップロード成功時のレスポンス")
+    @bp.alt_response(400, description="無効な画像ファイル、または形式不正")
     def post(self, data):
         file = data["file"]
         allowed = {"jpg", "jpeg", "bmp", "png", "gif"}

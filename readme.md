@@ -48,8 +48,12 @@ Get-ChildItem -Recurse -Include *.pyc | Remove-Item -Force
 # 一時的にPowerShellを管理者として実行
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
+# pythonバージョン
+3.9.12
+
 # 仮想環境
 python -m venv venv
+一時的にPowerShellを管理者として実行(windows)
 .\venv\Scripts\Activate.ps1
 pip install --upgrade pip
 pip install -r requirements.txt

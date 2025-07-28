@@ -181,6 +181,3 @@ cython_debug/
 
 # flask migrations
 migrations/*
-
-facenet_keras.h5
-*.tflite
