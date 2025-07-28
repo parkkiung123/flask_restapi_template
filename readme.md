@@ -23,7 +23,8 @@ flask run
 python -m app.grpc_server.server
 
 ## swagger doc
-localhost:5000/docs
+localhost:5000/docs  
+※ https://github.com/parkkiung123/flask_restapi_template/blob/grpc_imageproc/swagger_doc_screenshot.png
 
 ## 全体テスト(chatGPT生成)
 pytest -v
