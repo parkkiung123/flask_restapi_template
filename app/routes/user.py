@@ -1,4 +1,3 @@
-import cv2
 from flask import abort, current_app, request
 from flask_smorest import Blueprint
 from flask.views import MethodView
@@ -12,45 +11,54 @@ from app.routes.image import grpc_request_image
 
 bp = Blueprint("user", __name__, description="ユーザーAPI")
 
+def hash_password(plain_password: str) -> str:
+    """パスワードをハッシュ化する"""
+    return bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+def process_face_photo(file):
+    """顔写真ファイルを gRPC 経由で送信して結果を取得"""
+    if not file:
+        return None
+    try:
+        image_bytes = file.read()
+        res = grpc_request_image("GetCropFace", image_bytes)
+        return res.image if res and res.image else None
+    except grpc.RpcError as e:
+        abort(400, description=f"画像処理エラー: {e.details()}")
+
 @bp.route("/list")
 class UserList(MethodView):
-    # クラス全体を保護したい
-    # decorators = [jwt_required()]    
-    # 保護されたルート
+    """ユーザー一覧を取得"""
     @jwt_required()
     @bp.response(200, UserListResScheme(many=True))
     def get(self):
-        """保護されたルート（JWT 必須）"""
+        """JWT が必要なユーザー一覧取得エンドポイント"""
         user_id = get_jwt_identity()
-        current_app.logger.info(f"アクセス中のユーザーID: {user_id}")
+        current_app.logger.info(f"[UserList] アクセス中のユーザーID: {user_id}")
         return User.query.all()
 
 @bp.route("/add")
 class UserAdd(MethodView):
-    @bp.arguments(UserSchema, location="form")  # JSONではなくフォームのデータを取得
+    """新規ユーザー追加"""
+
+    @bp.arguments(UserSchema, location="form")  # フォーム送信
     @bp.response(201, UserSchema)
     def post(self, data):
-        # パスワードハッシュ化
-        hashed_pw = bcrypt.hashpw(data["userpass"].encode("utf-8"), bcrypt.gensalt())
-        data["userpass"] = hashed_pw.decode("utf-8")
+        """フォームからユーザー情報を受け取り、新規ユーザーを追加"""
 
-        # ファイルは request.files から取り出す
+        current_app.logger.debug(f"[UserAdd] 受信データ: {data}")
+
+        # パスワードをハッシュ化
+        data["userpass"] = hash_password(data["userpass"])
+
+        # 顔写真処理
         file = request.files.get('facephoto')
-        if file:
-            try:
-                image_bytes = file.read()
-                res = grpc_request_image("GetCropFace", image_bytes)
-            except grpc.RpcError as e:
-                abort(400, description=e.details())
-            byteArr = res.image
-            if byteArr is None:
-                photo_data = None
-            else:
-                photo_data = byteArr
-        else:
-            photo_data = None
+        facephoto = process_face_photo(file)
 
-        user = User(**data, facephoto=photo_data)
+        # ユーザー作成とDB保存
+        user = User(**data, facephoto=facephoto)
         db.session.add(user)
         db.session.commit()
+
+        current_app.logger.info(f"[UserAdd] ユーザー {user.userid} を追加しました")
         return user

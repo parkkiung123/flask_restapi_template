@@ -63,7 +63,7 @@ class ImgProcessor:
             resjsonarray=[]
 
             img_h,img_w=npimg.shape[:2]
-            detections,classeslist,pil_image=ocr.inference_on_detector_custom(self.detector,npimage=npimg)
+            detections,classeslist,pil_image=ocr.inference_on_detector_custom(self.detector_ocr,npimage=npimg)
             
             resultobj=[dict(),dict()]
             resultobj[0][0]=list()
@@ -92,7 +92,7 @@ class ImgProcessor:
                     alllinecnt+=1
                     lineimg=npimg[ymin:ymin+line_h,xmin:xmin+line_w,:]
                     targetdflist.append(lineimg)
-                resultlines = executor.map(self.recognizer.read, targetdflist)
+                resultlines = executor.map(self.recognizer_ocr.read, targetdflist)
                 resultlines=list(resultlines)
                 alltextlist.append("\n".join(resultlines))
                 for idx,lineobj in enumerate(root.findall(".//LINE")):
@@ -143,7 +143,7 @@ class ImgProcessor:
         # Face Detector生成
         base_options = python.BaseOptions(model_asset_path=model_path)
         options = vision.FaceDetectorOptions(base_options=base_options, )
-        self.detector = vision.FaceDetector.create_from_options(options)
+        self.detector_face = vision.FaceDetector.create_from_options(options)
         print("Face Detector initialized.")
 
     def init_face_similarity(self):
@@ -163,8 +163,8 @@ class ImgProcessor:
         parser.add_argument("--rec-classes", type=str, required=False, help="Path to list of class in yaml file", default="app/grpc_server/kotenOCR/config/NDLmoji.yaml")
         parser.add_argument("--device", type=str, required=False, help="Device use (cpu or cude)", choices=["cpu", "cuda"], default="cpu")
         args = parser.parse_args()
-        self.recognizer = ocr.get_recognizer(args=args)
-        self.detector = ocr.get_detector(args=args)
+        self.recognizer_ocr = ocr.get_recognizer(args=args)
+        self.detector_ocr = ocr.get_detector(args=args)
         print("KotenOCR model initialized.")
 
     def pre_process(self, stream):
@@ -194,7 +194,7 @@ class ImgProcessor:
         return frame
     
     def face_crop(self, frame):
-        if self.detector is None:
+        if self.detector_face is None:
             raise ValueError("Face detector model is not initialized.")
         
         # Mediapipe に渡すため RGBA に変換
@@ -203,7 +203,7 @@ class ImgProcessor:
             data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA),
         )
 
-        detection_result = self.detector.detect(rgb_frame)
+        detection_result = self.detector_face.detect(rgb_frame)
         image_height, image_width = frame.shape[:2]
 
         # 顔が検出されなければ None を返す

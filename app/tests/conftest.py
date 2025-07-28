@@ -10,7 +10,7 @@ import bcrypt
 # ベースディレクトリ（tests/ の親 = プロジェクトルート）
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_IMAGE_DIR = os.path.join(BASE_DIR, "tests", "assets")
-TEST_IMAGE_NAME = "test_noface.jpg"
+TEST_IMAGE_NAME = "test_face.jpg"
 
 @pytest.fixture
 def app():

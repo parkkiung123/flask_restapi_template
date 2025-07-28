@@ -15,11 +15,14 @@ curl.exe http://localhost:5000/api/v1/user/list
 
 # ユーザー追加
 curl.exe -X POST http://localhost:5000/api/v1/user/add -H "Authorization: Bearer <トークン>" -H "Content-Type: application/json" -d @test_data/users_input.json
+仕様変更
+cmd
+curl -X POST -d "userid=user1&name=name1&userpass=userpass1" http://localhost:5000/api/v1/user/add
 
 ✅ 対策①：use_reloader=False を明示する（開発時）
 if __name__ == "__main__":
     app.run(debug=True, use_reloader=False)
-これでログ出力は 1回だけ になります。
+これで実行は 1回だけ になります。
 
 # センサーリスト
 curl.exe http://localhost:5000/api/v1/sensor/list
@@ -36,6 +39,7 @@ pytest app/tests/test_sensor.py::test_get_list
 python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. image.proto
 
 # grpcサーバーの起動
+パスの問題があるが、環境変数指定したくなかったのでappとかをいれてやっている
 python -m app.grpc_server.server
 
 # pythonのキャッシュ削除
