@@ -2,7 +2,7 @@ from datetime import datetime, date
 from flask import request, abort
 from flask.views import MethodView
 from flask_smorest import Blueprint
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from sqlalchemy import and_
 from app.models.models import Sensor, db, SensorType
 from app.schemas.schemas import SensorSchema

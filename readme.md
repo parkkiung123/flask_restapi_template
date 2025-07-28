@@ -1,251 +1,71 @@
-素晴らしい目的です！
-以下に、\*\*Flask + Flask-Smorest + SQLAlchemy + JWT + Marshmallow構成でのREST APIテンプレート（ボイラープレート）\*\*を一から組み立てる方法を紹介します。
+# 起動法
+flask db init                   # 初期化（初回だけ）rm -r migrations (Error: Directory migrations already exists and is not empty)
+flask db migrate -m "init"      # モデルからマイグレーションスクリプト作成
+flask db upgrade                # テーブルをDBに反映
+python seed.py
+flask run
 
----
+# ログイン
+curl.exe -X POST http://localhost:5000/api/v1/auth/login -H "Content-Type: application/json" -d @test_data/user.json
 
-## ✅ ゴール：REST API テンプレート構成（自作）
+# 保護ルート（トークン要）
+curl.exe -H "Authorization: Bearer <トークン>" http://localhost:5000/api/v1/user/list
+# エラー{"msg":"Missing Authorization Header"}
+curl.exe http://localhost:5000/api/v1/user/list
 
-構成は以下のようになります：
+# ユーザー追加
+curl.exe -X POST http://localhost:5000/api/v1/user/add -H "Authorization: Bearer <トークン>" -H "Content-Type: application/json" -d @test_data/users_input.json
+仕様変更
+cmd
+curl -X POST -d "userid=user1&name=name1&userpass=userpass1" http://localhost:5000/api/v1/user/add
 
-```
-flask-rest-api-template/
-├── app/
-│   ├── __init__.py         # create_app()定義
-│   ├── config.py           # 環境設定
-│   ├── extensions.py       # db, jwt, api など
-│   ├── models/
-│   │   └── user.py         # Userモデル
-│   ├── routes/
-│   │   └── user.py         # Userルート（Blueprint）
-│   ├── controllers/
-│   │   └── user_controller.py # ロジック
-│   └── schemas/
-│       └── user_schema.py  # marshmallowスキーマ
-├── migrations/             # Alembic用
-├── .env                    # 環境変数（JWTキーなど）
-├── requirements.txt        # 必要パッケージ
-├── run.py                  # 実行エントリポイント
-└── README.md
-```
-
----
-
-## ✅ 手順で構築する
-
----
-
-### ① 必要パッケージのインストール
-
-```bash
-pip install flask flask-smorest flask-sqlalchemy flask-migrate flask-jwt-extended marshmallow webargs python-dotenv
-```
-
----
-
-### ② `run.py`（起動スクリプト）
-
-```python
-# run.py
-from app import create_app
-
-app = create_app()
-
+✅ 対策①：use_reloader=False を明示する（開発時）
 if __name__ == "__main__":
-    app.run(debug=True)
-```
+    app.run(debug=True, use_reloader=False)
+これで実行は 1回だけ になります。
 
----
+# センサーリスト
+curl.exe http://localhost:5000/api/v1/sensor/list
 
-### ③ `app/__init__.py`（アプリ生成）
+# センサー入力
+curl.exe -X POST http://localhost:5000/api/v1/sensor/add -H "Content-Type: application/json" -d @test_data/sensors_input.json
 
-```python
-from flask import Flask
-from app.extensions import db, migrate, jwt, api
-from app.routes.user import bp as user_bp
-from app.config import Config
+# テスト
+pytest -v
+pytest app/tests/test_sensor.py
+pytest app/tests/test_sensor.py::test_get_list
 
-def create_app():
-    app = Flask(__name__)
-    app.config.from_object(Config)
+# grpcコードの作成 (画像処理用)
+python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. image.proto
 
-    db.init_app(app)
-    migrate.init_app(app, db)
-    jwt.init_app(app)
-    api.init_app(app)
+# grpcサーバーの起動
+python -m app.grpc_server.server
 
-    api.register_blueprint(user_bp, url_prefix="/api/users")
+# pythonのキャッシュ削除
+Get-ChildItem -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force
+Get-ChildItem -Recurse -Include *.pyc | Remove-Item -Force
 
-    return app
-```
+# 一時的にPowerShellを管理者として実行
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
----
+# 仮想環境
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install --upgrade pip
+pip install -r requirements.txt
 
-### ④ `app/extensions.py`（Flask拡張まとめ）
+# 参照
+古典籍の画像の文字認識 https://github.com/ndl-lab/ndlkotenocr-lite
 
-```python
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
-from flask_smorest import Api
+# swagger doc
+localhost:5000/docs
 
-db = SQLAlchemy()
-migrate = Migrate()
-jwt = JWTManager()
-api = Api()
-```
+# flask 起動
+仮想環境インストール後
+flask run
 
----
+# 画像処理 grpcサーバーの起動
+python -m app.grpc_server.server
 
-### ⑤ `app/config.py`（設定）
-
-```python
-import os
-from datetime import timedelta
-from dotenv import load_dotenv
-
-load_dotenv()
-
-class Config:
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI", "sqlite:///data.db")
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret")
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
-
-    API_TITLE = "REST API Template"
-    API_VERSION = "v1"
-    OPENAPI_VERSION = "3.0.2"
-    OPENAPI_SWAGGER_UI_PATH = "/docs"
-    OPENAPI_SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
-```
-
----
-
-### ⑥ `app/models/user.py`（SQLAlchemyモデル）
-
-```python
-from app.extensions import db
-
-class User(db.Model):
-    __tablename__ = "users"
-
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-```
-
----
-
-### ⑦ `app/schemas/user_schema.py`（marshmallowスキーマ）
-
-```python
-from marshmallow import Schema, fields
-
-class UserSchema(Schema):
-    id = fields.Int(dump_only=True)
-    username = fields.Str(required=True)
-    email = fields.Email(required=True)
-```
-
----
-
-### ⑧ `app/controllers/user_controller.py`（ビジネスロジック）
-
-```python
-from app.models.user import User
-from app.extensions import db
-
-class UserController:
-    @staticmethod
-    def get_all():
-        return User.query.all()
-
-    @staticmethod
-    def create(data):
-        user = User(**data)
-        db.session.add(user)
-        db.session.commit()
-        return user
-```
-
----
-
-### ⑨ `app/routes/user.py`（エンドポイント定義）
-
-```python
-from flask_smorest import Blueprint
-from flask.views import MethodView
-from app.controllers.user_controller import UserController
-from app.schemas.user_schema import UserSchema
-
-bp = Blueprint("users", __name__, description="User APIs")
-
-@bp.route("/")
-class UserList(MethodView):
-    @bp.response(200, UserSchema(many=True))
-    def get(self):
-        return UserController.get_all()
-
-    @bp.arguments(UserSchema)
-    @bp.response(201, UserSchema)
-    def post(self, data):
-        return UserController.create(data)
-```
-
----
-
-### ⑩ `.env`（環境変数）
-
-```env
-JWT_SECRET_KEY=your_very_secret_key
-DATABASE_URI=sqlite:///data.db
-```
-
----
-
-### ⑪ `requirements.txt`
-
-```txt
-flask
-flask-smorest
-flask-sqlalchemy
-flask-migrate
-flask-jwt-extended
-marshmallow
-webargs
-python-dotenv
-```
-
----
-
-### ⑫ 初期化コマンド（初回だけ）
-
-```bash
-flask db init
-flask db migrate -m "initial"
-flask db upgrade
-```
-
----
-
-## ✅ 完成後の確認
-
-* `python run.py` で起動
-* `http://localhost:5000/docs` にアクセス → Swagger UI が表示
-* `/api/users/` に `GET`, `POST` リクエストが可能
-
----
-
-## 🧩 拡張していくなら…
-
-* 認証（ログイン/ユーザー登録）
-* エラーハンドリング共通化
-* モジュール分離（auth, tasks など）
-* Docker対応
-* CI/CD対応
-
----
-
-## 📦 テンプレートが欲しければ
-
-この構成を GitHub にテンプレートとして上げた形にしても提供できます。
-もし「リポジトリ形式で欲しい」「FastAPI 版も見てみたい」など要望があれば気軽に言ってください！
+# 全体テスト(chatGPT生成)
+pytest -v

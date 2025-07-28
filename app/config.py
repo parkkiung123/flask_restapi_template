@@ -23,5 +23,5 @@ class Config:
 
 class TestConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:1234@localhost/testdb_for_test_db"  # ★ テスト用DB
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_TEST_URI", "sqlite:///data_test.db")
     JWT_SECRET_KEY = "test-secret"
