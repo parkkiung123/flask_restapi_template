@@ -31,7 +31,7 @@ pytest -v
 ## frontデモ
 /front  
 ・顔距離データのチャート表示  
-webrtc_c2s(別prj : https://github.com/parkkiung123/webrtc_c2s)がdbにaddしたデータの中で本日の最新10個のデータを取得して表示  
+webrtc_c2s(別prj : https://github.com/parkkiung123/webrtc_c2s )がdbにaddしたデータの中で本日の最新10個のデータを取得して表示  
 ・画像処理APIのデモ  
 /front_react  
 npm install  
