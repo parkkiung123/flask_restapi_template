@@ -9,6 +9,10 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass (一時的にPowerShe
 pip install --upgrade pip (省略可)  
 pip install -r requirements.txt  
 
+## dbのインストール
+基本設定がpostgreとなっている (PostgreSQL 17.5 on x86_64-windowsで作業)  
+sqliteの基本設定を使いたい場合, .envのDATABASE_URIなどを削除  
+
 ## db設定
 flask db init                   # 初期化（初回だけ）rm -r migrations (Error: Directory migrations already exists and is not empty)  
 flask db migrate -m "init"      # モデルからマイグレーションスクリプト作成  
@@ -39,8 +43,9 @@ npm install
 npm run dev  
 ユーザーの登録とリストが見れる  
 
-## ssl証明書の発行
+## nginxリバースプロキシ, ssl証明書の発行
 C:\"Program Files"\OpenSSL-Win64\bin\openssl.exe req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 365  
+nginxの下にtempフォルダを作成  
 nginxフォルダに移動し, nginx.exeでリバースプロキシ  
 
 ## 参照
