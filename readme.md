@@ -39,6 +39,10 @@ npm install
 npm run dev  
 ユーザーの登録とリストが見れる  
 
+## ssl証明書の発行
+C:\"Program Files"\OpenSSL-Win64\bin\openssl.exe req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 365  
+nginxフォルダに移動し, nginx.exeでリバースプロキシ  
+
 ## 参照
 古典籍の画像の文字認識 https://github.com/ndl-lab/ndlkotenocr-lite
 
