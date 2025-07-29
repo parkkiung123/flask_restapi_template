@@ -181,3 +181,5 @@ cython_debug/
 
 # flask migrations
 migrations/*
+
+*.pem
