@@ -26,7 +26,7 @@ class Sensor(db.Model):
     type = db.Column(Enum(SensorType), nullable=False)
     data = db.Column(JSON, nullable=True)
     timestamp = db.Column(db.DateTime(timezone=True), nullable=False)
-    status = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.Integer, nullable=False) # 0 : off, 1 : on
     created_at = db.Column(db.DateTime, server_default=func.now(), nullable=False)
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
