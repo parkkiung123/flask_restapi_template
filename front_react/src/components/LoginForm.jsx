@@ -9,6 +9,7 @@ import {
   Alert,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { API } from '../utils/api';
 
 export default function LoginForm() {
   const [userid, setUserid] = useState('');
@@ -21,7 +22,7 @@ export default function LoginForm() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/v1/auth/login', {
+      const response = await fetch(API.login, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,9 +38,8 @@ export default function LoginForm() {
       const { access_token } = data;
 
       // JWT トークンを保存
-      localStorage.setItem('access_token', access_token);
+      sessionStorage.setItem('access_token', access_token);
 
-      // ホーム画面に遷移
       navigate('/users');
     } catch (err) {
       console.error(err);

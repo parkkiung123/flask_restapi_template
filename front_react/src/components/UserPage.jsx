@@ -8,8 +8,13 @@ import {
   Alert,
   Avatar,
   Box,
+  IconButton,
+  Button,  // 追加：ログアウトボタン用
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { API } from '../utils/api';
+import DeleteIcon from '@mui/icons-material/Delete';  // 削除アイコン
+import EditIcon from '@mui/icons-material/Edit';    // 更新アイコン（追加）
 
 export default function UserPage() {
   const [users, setUsers] = useState([]);
@@ -17,13 +22,13 @@ export default function UserPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     if (!token) {
       navigate('/'); // トークンがなければログイン画面へ
       return;
     }
 
-    fetch('http://localhost:5000/api/v1/user/list', {
+    fetch(API.userList, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -45,6 +50,45 @@ export default function UserPage() {
       });
   }, [navigate]);
 
+  const handleDelete = (userId) => {
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      setError('ログインセッションが無効です。');
+      return;
+    }
+
+    fetch(`${API.userDelete}/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || 'ユーザー削除に失敗しました');
+        }
+        return res.json();
+      })
+      .then(() => {
+        // 削除後、ユーザーリストを再取得して更新
+        setUsers(users.filter(user => user.userid !== userId));
+      })
+      .catch((err) => {
+        console.error(err);
+        setError('ユーザー削除に失敗しました。');
+      });
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('access_token'); // トークン削除
+    navigate('/'); // ログイン画面にリダイレクト
+  };
+
+  const handleUpdate = (userId) => {
+    navigate(`/update/${userId}`); // 更新ページに遷移
+  };
+
   return (
     <Paper sx={{ padding: 4, marginTop: 8 }}>
       <Typography variant="h5" gutterBottom>
@@ -52,6 +96,15 @@ export default function UserPage() {
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <Button 
+        variant="outlined" 
+        color="primary" 
+        onClick={handleLogout} 
+        sx={{ mb: 2 }}
+      >
+        ログアウト
+      </Button>
 
       <List>
         {users.map((user, index) => (
@@ -77,6 +130,24 @@ export default function UserPage() {
               }
               secondary={`ユーザーID: ${user.userid}`}
             />
+            {/* 削除アイコン */}
+            <IconButton
+              edge="end"
+              color="error"
+              onClick={() => handleDelete(user.userid)}
+              sx={{ ml: 2 }}
+            >
+              <DeleteIcon />
+            </IconButton>
+            {/* 更新アイコン */}
+            <IconButton
+              edge="end"
+              color="primary"
+              onClick={() => handleUpdate(user.userid)}  // 更新ページに遷移
+              sx={{ ml: 2 }}
+            >
+              <EditIcon />
+            </IconButton>
           </ListItem>
         ))}
       </List>

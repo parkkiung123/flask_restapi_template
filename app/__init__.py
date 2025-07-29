@@ -37,4 +37,8 @@ def create_app(testing=False):
         ))
         app.logger.addHandler(handler)
 
+    # # HTTPS設定
+    # if not app.debug:  # デバッグモードではhttpsにしない
+    #     app.run(ssl_context=('server.crt', 'server.key'))
+
     return app

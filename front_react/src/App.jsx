@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginForm from './components/LoginForm';
 import RegisterForm from './components/RegisterForm';
 import UserPage from './components/UserPage';
+import UpdateForm from './components/UpdateForm';
 import { Container, CssBaseline } from '@mui/material';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Route path="/" element={<LoginForm />} />
           <Route path="/register" element={<RegisterForm />} />
           <Route path="/users" element={<UserPage />} /> {/* ← JWT保護ページ */}
+          <Route path="/update/:userId" element={<UpdateForm />} />
         </Routes>
       </Container>
     </Router>

@@ -6,12 +6,15 @@ import {
   TextField,
   Button,
 } from "@mui/material";
+import { useNavigate } from 'react-router-dom';
+import { API } from '../utils/api';
 
 export default function RegisterForm() {
   const [userid, setUserid] = useState("");
   const [name, setName] = useState("");
   const [userpass, setUserpass] = useState("");
   const [facephoto, setFacephoto] = useState(null);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +28,7 @@ export default function RegisterForm() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/v1/user/add", {
+      const response = await fetch(API.userAdd, {
         method: "POST",
         body: formData, // multipart/form-data自動設定
       });
@@ -37,6 +40,7 @@ export default function RegisterForm() {
       const data = await response.json();
       console.log("登録成功:", data);
       // 登録成功後の処理（例: フォームリセットや遷移）
+      navigate('/');
     } catch (error) {
       console.error(error);
       alert("登録に失敗しました");

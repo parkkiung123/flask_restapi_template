@@ -58,3 +58,63 @@ class UserAdd(MethodView):
 
         current_app.logger.info(f"[UserAdd] ユーザー {user.userid} を追加しました")
         return user
+
+@bp.route("/delete/<string:user_id>")
+class UserDelete(MethodView):
+    @jwt_required()
+    @bp.doc(description="ユーザーID に基づいてユーザーを削除")
+    def delete(self, user_id):
+        user = User.query.filter_by(userid=user_id).first()
+        if not user:
+            abort(404, description=f"ユーザー {user_id} が見つかりません")
+
+        # ユーザー削除
+        db.session.delete(user)
+        db.session.commit()
+
+        current_app.logger.info(f"[UserDelete] ユーザー {user_id} を削除しました")
+        return {"message": f"ユーザー {user_id} は削除されました"}, 200
+
+@bp.route("/update/<string:user_id>")
+class UserUpdate(MethodView):
+    decorators = [jwt_required()]
+    @bp.arguments(UserSchema, location="form")  # JSON 形式で更新データを受け取る
+    @bp.response(200, UserSchema)
+    @bp.doc(description="ユーザー情報を更新")
+    def put(self, data, user_id):
+        # ユーザーを取得
+        user = User.query.filter_by(userid=user_id).first()
+        if not user:
+            abort(404, description=f"ユーザー {user_id} が見つかりません")
+
+        current_app.logger.debug(f"[UserUpdate] 更新対象ユーザー: {user.userid}")
+
+        # パスワードが変更されていればハッシュ化
+        if "userpass" in data:
+            data["userpass"] = hash_password(data["userpass"])
+
+        # 顔写真処理
+        if 'facephoto' in request.files:
+            file = request.files['facephoto']
+            facephoto = process_face_photo(file)
+            data["facephoto"] = facephoto
+
+        # ユーザー情報を更新
+        for key, value in data.items():
+            setattr(user, key, value)
+
+        db.session.commit()
+
+        current_app.logger.info(f"[UserUpdate] ユーザー {user.userid} を更新しました")
+        return user
+
+    @bp.response(200, UserSchema)
+    @bp.doc(description="ユーザー情報を取得")
+    def get(self, user_id):
+        # ユーザーを取得
+        user = User.query.filter_by(userid=user_id).first()
+        if not user:
+            abort(404, description=f"ユーザー {user_id} が見つかりません")
+
+        current_app.logger.debug(f"[UserUpdate] 取得対象ユーザー: {user.userid}")
+        return user
