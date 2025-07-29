@@ -7,7 +7,7 @@ from flask import current_app
 from werkzeug.utils import secure_filename
 from app.schemas.schemas import FileSchema  # ← スキーマを読み込み
 
-bp = Blueprint("file", __name__, url_prefix="/file", description="ファイル操作")
+bp = Blueprint("file", __name__, description="ファイル操作")
 
 def allowed_file(filename, extensions):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in extensions

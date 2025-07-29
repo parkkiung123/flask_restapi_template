@@ -1,0 +1,90 @@
+{
+    "Seoul": {
+        "coordinates": {"latitude": 37.5665, "longitude": 126.9783},
+        "temperature_url": "https://www.accuweather.com/en/kr/seoul/226081/weather-forecast/226081"
+    },
+    "Beijing": {
+        "coordinates": {"latitude": 39.9042, "longitude": 116.4074},
+        "temperature_url": "https://www.accuweather.com/en/cn/beijing/101924/weather-forecast/101924"
+    },
+    "Taipei": {
+        "coordinates": {"latitude": 25.0330, "longitude": 121.5654},
+        "temperature_url": "https://www.accuweather.com/en/tw/taipei-city/4-315078_1_al/weather-forecast/4-315078_1_al"
+    },
+    "Manila": {
+        "coordinates": {"latitude": 14.5995, "longitude": 120.9842},
+        "temperature_url": "https://www.accuweather.com/en/ph/manila/264885/weather-forecast/264885"
+    },
+    "Jakarta": {
+        "coordinates": {"latitude": -6.2088, "longitude": 106.8456},
+        "temperature_url": "https://www.accuweather.com/en/id/jakarta/208971/weather-forecast/208971"
+    },
+    "Sydney": {
+        "coordinates": {"latitude": -33.8688, "longitude": 151.2093},
+        "temperature_url": "https://www.accuweather.com/en/au/sydney/22889/weather-forecast/22889"
+    },
+    "Bangkok": {
+        "coordinates": {"latitude": 13.7563, "longitude": 100.5018},
+        "temperature_url": "https://www.accuweather.com/en/th/ban-kok/1619554/weather-forecast/1619554"
+    },
+    "New Delhi": {
+        "coordinates": {"latitude": 28.6139, "longitude": 77.2090},
+        "temperature_url": "https://www.accuweather.com/en/in/new-delhi/187745/weather-forecast/187745"
+    },
+    "Dubai": {
+        "coordinates": {"latitude": 25.276987, "longitude": 55.296249},
+        "temperature_url": "https://www.accuweather.com/en/ae/dubai/323091/weather-forecast/323091"
+    },
+    "Istanbul": {
+        "coordinates": {"latitude": 41.0082, "longitude": 28.9784},
+        "temperature_url": "https://www.accuweather.com/en/tr/istanbul/318251/weather-forecast/318251"
+    },
+    "Cairo": {
+        "coordinates": {"latitude": 30.0444, "longitude": 31.2357},
+        "temperature_url": "https://www.accuweather.com/en/eg/cairo/127164/weather-forecast/127164"
+    },
+    "Berlin": {
+        "coordinates": {"latitude": 52.5200, "longitude": 13.4050},
+        "temperature_url": "https://www.accuweather.com/en/de/berlin/10178/weather-forecast/178087"
+    },
+    "Paris": {
+        "coordinates": {"latitude": 48.8566, "longitude": 2.3522},
+        "temperature_url": "https://www.accuweather.com/en/fr/paris/623/weather-forecast/623"
+    },
+    "London": {
+        "coordinates": {"latitude": 51.5074, "longitude": -0.1278},
+        "temperature_url": "https://www.accuweather.com/en/gb/london/ec4a-2/weather-forecast/328328"
+    },
+    "New York": {
+        "coordinates": {"latitude": 40.7128, "longitude": -74.0060},
+        "temperature_url": "https://www.accuweather.com/en/us/new-york/10021/weather-forecast/349727"
+    },
+    "Los Angeles": {
+        "coordinates": {"latitude": 34.0522, "longitude": -118.2437},
+        "temperature_url": "https://www.accuweather.com/en/us/los-angeles/90012/weather-forecast/347625"
+    },
+    "Honolulu": {
+        "coordinates": {"latitude": 21.3069, "longitude": -157.8583},
+        "temperature_url": "https://www.accuweather.com/en/us/honolulu/96817/weather-forecast/348211"
+    },
+    "Tokyo": {
+        "coordinates": {"latitude": 35.6762, "longitude": 139.6503},
+        "temperature_url": "https://www.accuweather.com/en/jp/tokyo/226396/weather-forecast/226396"
+    },
+    "Osaka": {
+        "coordinates": {"latitude": 34.6937, "longitude": 135.5023},
+        "temperature_url": "https://www.accuweather.com/en/jp/osaka-shi/3-225007_1_al/weather-forecast/3-225007_1_al"
+    },
+    "Fukuoka": {
+        "coordinates": {"latitude": 33.5904, "longitude": 130.4017},
+        "temperature_url": "https://www.accuweather.com/en/jp/shirogane/1-1511640_1_al/weather-forecast/1-1511640_1_al"
+    },
+    "Kyoto": {
+        "coordinates": {"latitude": 35.0116, "longitude": 135.7681},
+        "temperature_url": "https://www.accuweather.com/en/jp/kyoto-shi/2-224436_1_al/weather-forecast/2-224436_1_al"
+    },
+    "Sapporo": {
+        "coordinates": {"latitude": 43.0618, "longitude": 141.3545},
+        "temperature_url": "https://www.accuweather.com/en/jp/sapporo-shi/1-223985_1_al/weather-forecast/1-223985_1_al"
+    }
+}

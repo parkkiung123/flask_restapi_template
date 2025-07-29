@@ -45,6 +45,10 @@ class File2Schema(FileSchema):
         metadata={"description": "2つ目のアップロードファイル", "format": "binary"}
     )
 
+class WeatherSchema(Schema):
+    city = fields.Str(required=True)
+    temperature = fields.Str()
+
 class ImageBase64Schema(Schema):
     image = fields.String(
         required=True,

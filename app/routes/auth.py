@@ -3,7 +3,6 @@ from flask import current_app
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from app.schemas.schemas import LoginSchema
-from app.extensions import api
 from app.models.models import User
 from flask_jwt_extended import create_access_token
 import bcrypt

@@ -49,3 +49,6 @@ pyparsing==3.1.2
 PyYAML==6.0.1
 reportlab==4.2.5
 pypdfium2==4.30.0
+
+# --- crawling ---
+beautifulsoup4
