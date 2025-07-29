@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Temperature Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <style>
+    #map { height: 600px; width: 100%; }
+    #loading { font-size: 20px; font-weight: bold; text-align: center; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <h2>今日の天気 <span id="today"></span></h2>
+  <div id="loading">読み込み中...</div>  <!-- 読み込み中メッセージ -->
+  <div id="map"></div>
+
+  <script>
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const date = today.getDate();
+    document.getElementById("today").textContent = `${year}/${month}/${date}`;
+
+    // 地図の初期設定
+    var map = L.map('map').setView([0, 0], 2); // 初期位置を中央に
+
+    // OpenStreetMapタイルを使用
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    // API URL
+    const apiUrl = 'http://localhost:5000/api/v1/crawling/weatherAll';  // APIのURL（バックエンドから取得するエンドポイント）
+
+    // fetchを使ってAPIからデータを取得
+    fetch(apiUrl)
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            throw new Error("APIからデータを取得できませんでした");
+        }
+    })
+    .then(data => {
+        // APIから取得したデータをcities配列に設定
+        const cities = data.map(cityData => ({
+            city: cityData.city,
+            lat: cityData.lat,
+            lon: cityData.lon,
+            temperature: cityData.temperature
+        }));
+        console.log(cities);  // 結果をコンソールに表示
+
+        // 読み込み中メッセージを非表示にする
+        document.getElementById("loading").style.display = 'none';
+
+        // 地図にマーカーを追加
+        cities.forEach(function(city) {
+            var marker = L.marker([city.lat, city.lon]).addTo(map);
+            marker.bindTooltip(`<b>${city.city}</b><br>Temperature: ${city.temperature}`, { permanent: true, direction: 'top' });
+        });
+    })
+    .catch(error => {
+        console.error("エラー:", error);
+        document.getElementById("loading").textContent = "データの取得に失敗しました。";
+    });
+  </script>
+</body>
+</html>

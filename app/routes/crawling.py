@@ -1,5 +1,6 @@
 # app/routes/crawling.py
 import concurrent
+import json
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from app.models.models import City
@@ -67,20 +68,20 @@ class WeatherAll(MethodView):
 
         # Cityテーブルからすべての都市を取得
         cities = City.query.all()
-        # city: temperature_url のペアを辞書に格納
-        url_dict = {city.city: city.temperature_url for city in cities}
         
         # 並列処理で複数都市の天気情報を取得
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # 各都市の天気情報を非同期で取得
-            results = executor.map(get_temperature_by_url, url_dict.values())
+            results = executor.map(get_temperature_by_url, [city.temperature_url for city in cities])
         
         # 並列処理で返された結果をリストに追加
-        for city, temperature in zip(url_dict.keys(), results):
+        for city, temperature in zip(cities, results):
             if temperature:  # 温度が取得できた場合のみ追加
                 weather_data.append({
-                    "city": city,
-                    "temperature": temperature,
+                    "city": city.city,
+                    "lat": city.coordinates.get("latitude"),  # 緯度を取得
+                    "lon": city.coordinates.get("longitude"),  # 経度を取得
+                    "temperature": temperature,  # 温度情報
                 })
 
         return weather_data, 200

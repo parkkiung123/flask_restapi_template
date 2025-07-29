@@ -46,8 +46,10 @@ class File2Schema(FileSchema):
     )
 
 class WeatherSchema(Schema):
-    city = fields.Str(required=True)
-    temperature = fields.Str()
+    city = fields.Str(required=True)  # 都市名    
+    lat = fields.Float()  # 緯度
+    lon = fields.Float()  # 経度
+    temperature = fields.Str()  # 温度
 
 class ImageBase64Schema(Schema):
     image = fields.String(

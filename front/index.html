@@ -11,11 +11,15 @@
   <h2>Face Distance (cm) <span id="today"></span></h2>
   <canvas id="faceDistChart" style="width:700px; height:350px;"></canvas>
   <!-- 追加：ページ移動ボタン -->
-  <button id="moveBtn" style="margin-top: 20px; font-size: 16px;">画像処理APIのページへ</button>
+  <button id="moveBtn2imgProc" style="margin-top: 20px; font-size: 16px;">画像処理APIのページへ</button>
+  <button id="moveBtn2crawling" style="margin-top: 20px; font-size: 16px;">CrawlingAPIのページへ</button>
 
   <script>
-    document.getElementById('moveBtn').addEventListener('click', () => {
+    document.getElementById('moveBtn2imgProc').addEventListener('click', () => {
       window.location.href = 'index2.html';
+    });
+    document.getElementById('moveBtn2crawling').addEventListener('click', () => {
+      window.location.href = 'index3.html';
     });
     
     const today = new Date();
