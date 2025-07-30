@@ -185,3 +185,6 @@ migrations/*
 # nginx
 *.pem
 nginx.pid
+
+# uploads
+uploads

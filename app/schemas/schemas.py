@@ -51,6 +51,18 @@ class WeatherSchema(Schema):
     lon = fields.Float()  # 経度
     temperature = fields.Str()  # 温度
 
+class MangaDexSchema(Schema):
+    chapterId = fields.Str(
+        required=True,
+        description=(
+            "chapterIdの例:\n"
+            "- 58d69744-662e-4dfc-8ab1-cf4ffe60428e (Dragon Ball GT)\n"
+            "- 3c2380be-dfaf-4f32-bdd6-6a6c8ae1e6bd (GTO)\n"
+            "- de0ea6bc-3e3a-44e0-b325-ab5254713a97 (Slam Dunk)"
+        ),
+        example="58d69744-662e-4dfc-8ab1-cf4ffe60428e"
+)
+
 class ImageBase64Schema(Schema):
     image = fields.String(
         required=True,

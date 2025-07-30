@@ -1,4 +1,6 @@
 import logging
+import os
+import shutil
 from flask import Flask
 from app.extensions import db, migrate, jwt, api, cors
 from app.routes.user import bp as user_bp
@@ -14,7 +16,21 @@ def create_app(testing=False):
     if testing:
         app.config.from_object(TestConfig)
     else:
-        app.config.from_object(Config)  
+        app.config.from_object(Config)
+
+    # --- ここでuploads/mangadexフォルダの中身を削除 ---
+    upload_folder = os.path.join(app.config["UPLOAD_FOLDER"], "mangadex")
+    if os.path.exists(upload_folder):
+        for filename in os.listdir(upload_folder):
+            file_path = os.path.join(upload_folder, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)  # ファイルまたはリンクを削除
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)  # ディレクトリを削除
+            except Exception as e:
+                app.logger.error(f'Failed to delete {file_path}. Reason: {e}')
+    # -------------------------------------------------------
 
     db.init_app(app)
     migrate.init_app(app, db)
