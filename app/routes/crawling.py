@@ -1,12 +1,17 @@
 # app/routes/crawling.py
 import concurrent
-import json
+from flask import jsonify
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from app.models.models import City
 from app.schemas.schemas import WeatherSchema
 from bs4 import BeautifulSoup
 import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 bp = Blueprint("crawling", __name__, description="クローリングルート")
 
@@ -85,3 +90,41 @@ class WeatherAll(MethodView):
                 })
 
         return weather_data, 200
+
+
+@bp.route("/lotto10")
+class Lotto10(MethodView):
+    @bp.doc(description="韓国のロト6の最新10個の当選番号")
+    @bp.response(200, description="当選番号の取得に成功した場合")
+    @bp.alt_response(400, description="無効なリクエスト")
+    def get(self):
+        # selenium ヘッドレスChrome設定
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
+        driver = webdriver.Chrome(options=options)
+        
+        driver.get("https://superkts.com/lotto/recent/10")
+        # 例：最大10秒間、article.result.list が見つかるまで待つ
+        wait = WebDriverWait(driver, 10)
+        article = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "article.result.list")))
+
+        # すべての<tr>を取得
+        trs = article.find_elements(By.TAG_NAME, "tr")
+
+        results = []
+
+        # 3番目〜12番目（インデックス2〜11）をループ
+        for tr in trs[2:12]:
+            tds = tr.find_elements(By.TAG_NAME, "td")
+            numbers = [td.text.strip() for td in tds if td.text.strip().isdigit()]
+            
+            if len(numbers) >= 8:
+                # 最初の数字が回数、そのあとの7つが当選番号
+                draw_num = numbers[0]
+                draw_values = list(dict.fromkeys(map(int, numbers[1:8])))
+                results.append({int(draw_num): draw_values})
+
+        driver.quit()
+
+        return jsonify(results), 200

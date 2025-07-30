@@ -52,3 +52,4 @@ pypdfium2==4.30.0
 
 # --- crawling ---
 beautifulsoup4
+selenium

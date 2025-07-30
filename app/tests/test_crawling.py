@@ -78,3 +78,33 @@ def test_weather_all(client, api_prefix, seed_city_data):
         tokyo_data = next(item for item in json_data if item["city"] == "Tokyo")
         assert seoul_data["temperature"] == "27°C"
         assert tokyo_data["temperature"] == "22°C"
+
+def test_lotto10_real(client, api_prefix):
+    """実際のデータを使用した /lotto10 エンドポイントのテスト"""
+    url = f"{api_prefix}/{service_name}/lotto10"
+    response = client.get(url)
+
+    # 通信成功しているか確認
+    assert response.status_code == 200
+
+    json_data = response.get_json()
+    
+    # 結果がリストであること
+    assert isinstance(json_data, list)
+
+    # 要素数は10個
+    assert len(json_data) == 10
+
+    for entry in json_data:
+        # 各要素は {回数: [番号...]} 形式
+        assert isinstance(entry, dict)
+        for draw_num_str, numbers in entry.items():
+            try:
+                draw_num = int(draw_num_str)
+            except Exception:
+                assert False, f"draw_numをintに変換できませんでした: {draw_num_str}"
+            assert isinstance(draw_num, int)
+            assert isinstance(numbers, list)
+            assert len(numbers) == 7  # 通常は6つ＋ボーナス1つ
+            for num in numbers:
+                assert isinstance(num, int)
