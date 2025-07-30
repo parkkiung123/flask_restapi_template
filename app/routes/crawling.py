@@ -415,23 +415,15 @@ class MangaDexMultiProc(MethodView):
             )
         )
 
-    def process_page(self, page_num, base_url, file_prefix):
-        # プロセスごとにdriver生成⇒非効率
+    def process_page(self, driver, page_num, base_url, file_prefix):
         url = f"{base_url}/{page_num}"
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-
-        driver = webdriver.Chrome(options=options)
         driver.get(url)
         try:
             selector_text = "img[src^='blob:']"
-            # 下記、マルチだとたまに失敗する(??)
-            # WebDriverWait(driver, self.max_wait_time).until(
-            #     EC.presence_of_element_located((By.CSS_SELECTOR, selector_text))
-            # )
-            # self.wait_for_blob_image_loaded(driver, self.max_wait_time)
-            self.wait_for_js_complete(driver, 5) # timeoutに余裕を持って取得
+            WebDriverWait(driver, self.max_wait_time).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector_text))
+            )
+            self.wait_for_blob_image_loaded(driver, self.max_wait_time)
 
             visible_blob_imgs = driver.find_elements(By.CSS_SELECTOR, selector_text)
             visible_blob_imgs = [
@@ -454,52 +446,74 @@ class MangaDexMultiProc(MethodView):
 
         except Exception as e:
             print(f"ページ{page_num}の画像取得失敗:", e)
-        driver.quit()
 
     @bp.doc(description="mangadexのマルチプロセスバージョン")
     @bp.arguments(MangaDexSchema, location="json")
     @bp.response(200, description="マンガのダウンロードに成功した場合")
     @bp.alt_response(400, description="無効なリクエスト")
     def post(self, data):
-        """高性能のCPUが必要"""        
+        """高性能のCPUが必要"""
         self.upload_folder = os.path.join(current_app.config["UPLOAD_FOLDER"], "mangadex")
         base_url = self.base_url + "/" + data["chapterId"]
-        # Chrome headless設定
+
+        # ヘッドレスChromeの設定
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--disable-gpu")
 
+        # 最初のドライバでページ情報取得
         driver = webdriver.Chrome(options=options)
-
         page_info = self.get_page_info(driver, base_url)
         if not page_info:
             print("ページ情報取得できず終了")
             driver.quit()
             abort(400, description="ページ情報取得できず終了")
-        
-        file_prefix = f'{page_info["title"]}_{page_info["chapter"]}'        
+        driver.quit()
+
+        file_prefix = f'{page_info["title"]}_{page_info["chapter"]}'
         self.img_dir = os.path.join(self.upload_folder, "images")
         os.makedirs(self.img_dir, exist_ok=True)
         zip_path = os.path.join(self.img_dir, f"{file_prefix}.zip")
-        if os.path.exists(zip_path):
-            return send_file(zip_path, as_attachment=True, mimetype='application/zip')        
-        driver.quit()
-        
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            futures = []
-            for page_num in range(1, page_info["page"] + 1):
-                futures.append(executor.submit(self.process_page, page_num, base_url, file_prefix))
-            for future in as_completed(futures):
-                print(future.result())       
 
-        # jpgファイルをZIPにまとめる
+        if os.path.exists(zip_path):
+            return send_file(zip_path, as_attachment=True, mimetype='application/zip')
+
+        max_workers = 4
+        total_pages = page_info["page"]
+        pages_per_worker = (total_pages + max_workers - 1) // max_workers  # 切り上げ
+
+        def worker_task(start_page, end_page):
+            local_driver = webdriver.Chrome(options=options)
+            results = []
+            for page_num in range(start_page, end_page + 1):
+                result = self.process_page(local_driver, page_num, base_url, file_prefix)
+                results.append(result)
+            local_driver.quit()
+            return results
+
+        # 並列実行
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = []
+            for i in range(max_workers):
+                start = i * pages_per_worker + 1
+                end = min((i + 1) * pages_per_worker, total_pages)
+                if start > end:
+                    break
+                futures.append(executor.submit(worker_task, start, end))
+
+            for future in as_completed(futures):
+                for result in future.result():
+                    print(result)
+
+        # ZIP作成
         with zipfile.ZipFile(zip_path, "w") as zipf:
             for jpg_file in glob.glob(os.path.join(self.img_dir, "*.jpg")):
                 zipf.write(jpg_file, os.path.basename(jpg_file))
+
+        # 一時jpg削除（ZIP残す）
         try:
             for filename in os.listdir(self.img_dir):
                 file_path = os.path.join(self.img_dir, filename)
-                # ZIPファイルは削除しない
                 if file_path == zip_path:
                     continue
                 if os.path.isfile(file_path):
