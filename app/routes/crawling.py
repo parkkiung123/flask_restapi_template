@@ -1,5 +1,6 @@
 # app/routes/crawling.py
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 import os
 import zipfile
 import glob
@@ -10,8 +11,9 @@ import concurrent
 from flask import abort, jsonify, current_app, send_file, after_this_request
 from flask_smorest import Blueprint
 from flask.views import MethodView
+import yt_dlp
 from app.models.models import City
-from app.schemas.schemas import MangaDexSchema, WeatherSchema
+from app.schemas.schemas import MangaDexSchema, WeatherSchema, YoutubeDownloaderSchema
 from bs4 import BeautifulSoup
 import requests
 from selenium import webdriver
@@ -136,6 +138,37 @@ class Lotto10(MethodView):
 
         return jsonify(results), 200
     
+@bp.route("/youtube")
+class YoutubeDownloader(MethodView):
+    @bp.doc(description="MangaDexのchapterIdから該当チャプターのマンガをダウンロード")
+    @bp.arguments(YoutubeDownloaderSchema, location="json")
+    @bp.response(200, description="マンガのダウンロードに成功した場合")
+    @bp.alt_response(400, description="無効なリクエスト")
+    def post(self, data):
+        url = data["url"]
+        # 保存先ディレクトリを作成
+        save_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], "youtube")
+        os.makedirs(save_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        output_filename = f"downloaded_video_{timestamp}.mp4"
+        output_path = os.path.join(save_dir, output_filename)
+        # yt-dlpオプション
+        ydl_opts = {
+            'format': 'mp4',
+            'outtmpl': output_path,
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            # ファイルが存在するかチェックして返す
+            if os.path.exists(output_path):
+                return send_file(output_path, as_attachment=True, mimetype='video/mp4')
+            else:
+                abort(404, description="動画ファイルが見つかりません。")
+        except Exception as e:
+            return {"error": f"ダウンロードに失敗しました: {str(e)}"}, 400
+
+
 @bp.route("/mangadex")
 class MangaDex(MethodView):
     base_url = "https://mangadex.org/chapter"

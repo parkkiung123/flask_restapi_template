@@ -19,7 +19,7 @@ def create_app(testing=False):
         app.config.from_object(Config)
 
     # --- ここでuploads/mangadexフォルダの中身を削除 ---
-    upload_folder = os.path.join(app.config["UPLOAD_FOLDER"], "mangadex")
+    upload_folder = app.config["UPLOAD_FOLDER"]
     if os.path.exists(upload_folder):
         for filename in os.listdir(upload_folder):
             file_path = os.path.join(upload_folder, filename)

@@ -61,7 +61,13 @@ class MangaDexSchema(Schema):
             "- de0ea6bc-3e3a-44e0-b325-ab5254713a97 (Slam Dunk)"
         ),
         example="58d69744-662e-4dfc-8ab1-cf4ffe60428e"
-)
+    )
+    
+class YoutubeDownloaderSchema(Schema):
+    url = fields.Str(
+        required=True,
+        example="https://www.youtube.com/shorts/Mf7lTe55LY4"
+    )
 
 class ImageBase64Schema(Schema):
     image = fields.String(
