@@ -1,21 +1,19 @@
 # app/routes/crawling.py
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import os
 import zipfile
 import glob
-import shutil
-import re
-import base64
 import concurrent
-from flask import abort, jsonify, current_app, send_file, after_this_request
+from flask import abort, jsonify, current_app, send_file
 from flask_smorest import Blueprint
 from flask.views import MethodView
+import requests
 import yt_dlp
 from app.models.models import City
-from app.schemas.schemas import MangaDexSchema, WeatherSchema, YoutubeDownloaderSchema
-from bs4 import BeautifulSoup
-import requests
+from app.routes.utils.crawling_sub import get_temperature_by_url, mangadex_chap_downloader_multi, mangadex_chap_downloader_single
+from app.schemas.schemas import MangaDexChapSchema, MangaDexVolSchema, WeatherSchema, YoutubeDownloaderSchema
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -23,37 +21,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 bp = Blueprint("crawling", __name__, description="クローリングルート")
-
-def get_temperature_by_url(temperature_url):
-    try:
-        # ヘッダーを指定してGETリクエストを送る
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-
-        response = requests.get(temperature_url, headers=headers)
-        response.raise_for_status()  # ステータスコードが200以外の場合、例外を発生させる
-
-    except requests.exceptions.RequestException as e:
-        print(f"URLへのアクセス中にエラーが発生しました: {e}")
-        print("ウェブサイトの構造が変更されたか、アクセスがブロックされている可能性があります。")
-        return None
-
-    # BeautifulSoupを使ってHTMLを解析
-    soup = BeautifulSoup(response.text, 'html.parser')
-    header_inner_div = soup.find('div', class_='header-inner')
-
-    if header_inner_div:
-        header_temp_span = header_inner_div.find('span', class_='header-temp')
-
-        if header_temp_span:
-            return header_temp_span.get_text(strip=True)  # 温度を返す
-        else:
-            print("警告: <div class=\"header-inner\"> 内に <span class=\"header-temp\"> が見つかりませんでした。")
-            return None
-    else:
-        print("エラー: <div class=\"header-inner\"> が見つかりませんでした。")
-        return None
 
 @bp.route("/weather/<string:city>")
 class Weather(MethodView):
@@ -99,7 +66,6 @@ class WeatherAll(MethodView):
                 })
 
         return weather_data, 200
-
 
 @bp.route("/lotto10")
 class Lotto10(MethodView):
@@ -169,361 +135,152 @@ class YoutubeDownloader(MethodView):
             return {"error": f"ダウンロードに失敗しました: {str(e)}"}, 400
 
 
-@bp.route("/mangadex")
-class MangaDex(MethodView):
+@bp.route("/mangadex_chap")
+class MangaDexChapMulti(MethodView):
     base_url = "https://mangadex.org/chapter"
     max_wait_time = 5 # 秒
-
-    def sanitize_filename(self, name):
-        # ホワイトスペースを除去
-        name = re.sub(r'\s+', '', name)
-        # ファイル名として使えない文字を除去（Windowsの場合）
-        name = re.sub(r'[\\/:"*?<>|]+', '', name)
-        return name
-
-    def get_page_info(self, driver, base_url):    
-        driver.get(base_url)
-        try:
-            # ページ情報が出るまで待機
-            WebDriverWait(driver, self.max_wait_time).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div.reader--meta.page"))
-            )
-
-            # 各要素を取得
-            page_text = driver.find_element(By.CSS_SELECTOR, "div.reader--meta.page").text.strip()
-            title_text = driver.find_element(By.CSS_SELECTOR, "a.reader--header-manga").text.strip()
-            chapter_text = driver.find_element(By.CSS_SELECTOR, "div.reader--meta.chapter").text.strip()
-
-            # 1. ページ数（例: "Pg. 1 / 21" → 21）
-            match = re.search(r'/\s*(\d+)', page_text)
-            max_page = int(match.group(1)) if match else None
-
-            # 2. タイトル（例: "Dragon Ball GT" → "DragonBallGT"）
-            clean_title = self.sanitize_filename(title_text)
-
-            # 3. チャプター（例: "Vol. 1, Ch. 1" → "Vol1Ch1"）
-            clean_chapter = re.sub(r'[\s.,]', '', chapter_text)
-
-            return {
-                "page": max_page,
-                "title": clean_title,
-                "chapter": clean_chapter
-            }
-
-        except Exception as e:
-            print("❌ 要素取得に失敗:", e)
-            return None
-
-    def save_blob_image(self, driver, img_element, file_prefix, page_num):
-        # JavaScriptでCanvasに描画してBase64データ取得
-        script = """
-        var img = arguments[0];
-        var canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        return canvas.toDataURL('image/jpeg').split(',')[1];
-        """
-        base64_str = driver.execute_script(script, img_element)
-        img_data = base64.b64decode(base64_str)
-        img_path = os.path.join(self.img_dir, f"{file_prefix}_{page_num}.jpg")
-        with open(img_path, "wb") as f:
-            f.write(img_data)
-        print(f"ページ{page_num}の画像を保存しました: {img_path}")
-
-    def wait_for_blob_image_loaded(self, driver, timeout):
-        WebDriverWait(driver, timeout).until(
-            lambda d: any(
-                img.get_attribute("src").startswith("blob:") and
-                d.execute_script("return arguments[0].complete && arguments[0].naturalWidth > 0;", img)
-                for img in d.find_elements(By.TAG_NAME, "img")
-            )
-        )
-
-    @bp.doc(description="MangaDexのchapterIdから該当チャプターのマンガをダウンロード")
-    @bp.arguments(MangaDexSchema, location="json")
-    @bp.response(200, description="マンガのダウンロードに成功した場合")
-    @bp.alt_response(400, description="無効なリクエスト")
-    def post(self, data):        
-        self.upload_folder = os.path.join(current_app.config["UPLOAD_FOLDER"], "mangadex")
-        base_url = self.base_url + "/" + data["chapterId"]
-        # Chrome headless設定
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-
-        driver = webdriver.Chrome(options=options)
-
-        page_info = self.get_page_info(driver, base_url)
-        if not page_info:
-            print("ページ情報取得できず終了")
-            driver.quit()
-            abort(400, description="ページ情報取得できず終了")
-        
-        file_prefix = f'{page_info["title"]}_{page_info["chapter"]}'        
-        self.img_dir = os.path.join(self.upload_folder, "images")
-        os.makedirs(self.img_dir, exist_ok=True)
-        zip_path = os.path.join(self.img_dir, f"{file_prefix}.zip")
-        if os.path.exists(zip_path):
-            driver.quit()
-            return send_file(zip_path, as_attachment=True, mimetype='application/zip')
-
-        for page_num in range(1, page_info["page"] + 1):
-            url = f"{base_url}/{page_num}"
-            driver.get(url)
-
-            try:
-                selector_text = "img[src^='blob:']"
-                WebDriverWait(driver, self.max_wait_time).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, selector_text))
-                )
-                self.wait_for_blob_image_loaded(driver, self.max_wait_time)
-
-                visible_blob_imgs = driver.find_elements(By.CSS_SELECTOR, selector_text)
-                visible_blob_imgs = [
-                    img for img in visible_blob_imgs
-                    if "display:none" not in (img.get_attribute("style") or "").replace(" ", "").lower()
-                ]
-
-                if len(visible_blob_imgs) == 1:
-                    self.save_blob_image(driver, visible_blob_imgs[0], file_prefix, page_num)
-                else:
-                    print(f"ページ{page_num}: 表示されているblob画像が1個ではありません。{len(visible_blob_imgs)}個見つかりました。")
-                    html_dir = os.path.join(self.upload_folder, "htmls")
-                    os.makedirs(html_dir, exist_ok=True)
-                    html_path = os.path.join(html_dir, f"{file_prefix}_{page_num}.html")
-                    with open(html_path, "w", encoding="utf-8") as f:
-                        for img in visible_blob_imgs:
-                            outer_html = img.get_attribute("outerHTML")
-                            f.write(outer_html + "\n")
-                    print(f"ページ {page_num} のvisible_blob_imgsのHTMLを保存しました: {html_path}")
-
-            except Exception as e:
-                print(f"ページ{page_num}の画像取得失敗:", e)
-                driver.quit()
-                abort(400, description=f"ページ{page_num}の画像取得失敗")
-
-        driver.quit()
-
-        # jpgファイルをZIPにまとめる
-        with zipfile.ZipFile(zip_path, "w") as zipf:
-            for jpg_file in glob.glob(os.path.join(self.img_dir, "*.jpg")):
-                zipf.write(jpg_file, os.path.basename(jpg_file))
-        try:
-            for filename in os.listdir(self.img_dir):
-                file_path = os.path.join(self.img_dir, filename)
-                # ZIPファイルは削除しない
-                if file_path == zip_path:
-                    continue
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            print("jpgファイル削除完了")
-        except Exception as e:
-            print(f"jpgファイル削除エラー: {e}")
-            abort(404, description="jpgファイル削除エラー")
-
-        if os.path.exists(zip_path):
-            return send_file(zip_path, as_attachment=True, mimetype='application/zip')
-        else:
-            abort(404, description="ZIPファイルが見つかりません。")
-
-@bp.route("/mangadex_multiproc")
-class MangaDexMultiProc(MethodView):
-    base_url = "https://mangadex.org/chapter"
-    max_wait_time = 5 # 秒
-
-    def sanitize_filename(self, name):
-        # ホワイトスペースを除去
-        name = re.sub(r'\s+', '', name)
-        # ファイル名として使えない文字を除去（Windowsの場合）
-        name = re.sub(r'[\\/:"*?<>|]+', '', name)
-        return name
-    
-    def wait_for_js_complete(self, driver, timeout=1):
-        WebDriverWait(driver, timeout).until(
-            lambda d: d.execute_script('return document.readyState') == 'complete'
-        )
-        # 追加でAJAXなどの完了を待つ（jQueryがある場合）
-        try:
-            WebDriverWait(driver, timeout).until(
-                lambda d: d.execute_script('return window.jQuery != undefined && jQuery.active == 0')
-            )
-        except:
-            # jQueryが無ければ無視して続行
-            pass
-
-    def get_page_info(self, driver, base_url):    
-        driver.get(base_url)
-        try:
-            # ページ情報が出るまで待機
-            WebDriverWait(driver, self.max_wait_time).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div.reader--meta.page"))
-            )
-
-            # 各要素を取得
-            page_text = driver.find_element(By.CSS_SELECTOR, "div.reader--meta.page").text.strip()
-            title_text = driver.find_element(By.CSS_SELECTOR, "a.reader--header-manga").text.strip()
-            chapter_text = driver.find_element(By.CSS_SELECTOR, "div.reader--meta.chapter").text.strip()
-
-            # 1. ページ数（例: "Pg. 1 / 21" → 21）
-            match = re.search(r'/\s*(\d+)', page_text)
-            max_page = int(match.group(1)) if match else None
-
-            # 2. タイトル（例: "Dragon Ball GT" → "DragonBallGT"）
-            clean_title = self.sanitize_filename(title_text)
-
-            # 3. チャプター（例: "Vol. 1, Ch. 1" → "Vol1Ch1"）
-            clean_chapter = re.sub(r'[\s.,]', '', chapter_text)
-
-            return {
-                "page": max_page,
-                "title": clean_title,
-                "chapter": clean_chapter
-            }
-
-        except Exception as e:
-            print("❌ 要素取得に失敗:", e)
-            return None
-
-    def save_blob_image(self, driver, img_element, file_prefix, page_num):
-        # JavaScriptでCanvasに描画してBase64データ取得
-        script = """
-        var img = arguments[0];
-        var canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        return canvas.toDataURL('image/jpeg').split(',')[1];
-        """
-        base64_str = driver.execute_script(script, img_element)
-        img_data = base64.b64decode(base64_str)
-        img_path = os.path.join(self.img_dir, f"{file_prefix}_{page_num}.jpg")
-        with open(img_path, "wb") as f:
-            f.write(img_data)
-        print(f"ページ{page_num}の画像を保存しました: {img_path}")
-
-    def wait_for_blob_image_loaded(self, driver, timeout):
-        WebDriverWait(driver, timeout).until(
-            lambda d: any(
-                img.get_attribute("src").startswith("blob:") and
-                d.execute_script("return arguments[0].complete && arguments[0].naturalWidth > 0;", img)
-                for img in d.find_elements(By.TAG_NAME, "img")
-            )
-        )
-
-    def process_page(self, driver, page_num, base_url, file_prefix):
-        url = f"{base_url}/{page_num}"
-        driver.get(url)
-        try:
-            selector_text = "img[src^='blob:']"
-            WebDriverWait(driver, self.max_wait_time).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, selector_text))
-            )
-            self.wait_for_blob_image_loaded(driver, self.max_wait_time)
-
-            visible_blob_imgs = driver.find_elements(By.CSS_SELECTOR, selector_text)
-            visible_blob_imgs = [
-                img for img in visible_blob_imgs
-                if "display:none" not in (img.get_attribute("style") or "").replace(" ", "").lower()
-            ]
-
-            if len(visible_blob_imgs) == 1:
-                self.save_blob_image(driver, visible_blob_imgs[0], file_prefix, page_num)
-            else:
-                print(f"ページ{page_num}: 表示されているblob画像が1個ではありません。{len(visible_blob_imgs)}個見つかりました。")
-                html_dir = os.path.join(self.upload_folder, "htmls")
-                os.makedirs(html_dir, exist_ok=True)
-                html_path = os.path.join(html_dir, f"{file_prefix}_{page_num}.html")
-                with open(html_path, "w", encoding="utf-8") as f:
-                    for img in visible_blob_imgs:
-                        outer_html = img.get_attribute("outerHTML")
-                        f.write(outer_html + "\n")
-                print(f"ページ {page_num} のvisible_blob_imgsのHTMLを保存しました: {html_path}")
-
-        except Exception as e:
-            print(f"ページ{page_num}の画像取得失敗:", e)
-
-    @bp.doc(description="mangadexのマルチプロセスバージョン")
-    @bp.arguments(MangaDexSchema, location="json")
+    @bp.doc(description="MangaDexのchapterIdから該当チャプターのマンガをダウンロード(マルチプロセス)")
+    @bp.arguments(MangaDexChapSchema, location="json")
     @bp.response(200, description="マンガのダウンロードに成功した場合")
     @bp.alt_response(400, description="無効なリクエスト")
     def post(self, data):
-        """高性能のCPUが必要"""
-        self.upload_folder = os.path.join(current_app.config["UPLOAD_FOLDER"], "mangadex")
-        base_url = self.base_url + "/" + data["chapterId"]
+        """CPUコア数の半分で実行される"""        
+        upload_folder = os.path.join(current_app.config["UPLOAD_FOLDER"], "mangadex")
+        base_url = self.base_url + "/" + data["chapterId"]        
+        # ヘッドレスChromeの設定
+        options = Options()
+        options.add_argument("--headless")
+        options.add_argument("--disable-gpu")
+        return mangadex_chap_downloader_multi(options, upload_folder, base_url, self.max_wait_time)
 
+
+@bp.route("/mangadex_chap_singleproc")
+class MangaDexChapSingle(MethodView):
+    base_url = "https://mangadex.org/chapter"
+    max_wait_time = 5 # 秒
+    img_dir = ""
+    @bp.doc(description="MangaDexのchapterIdから該当チャプターのマンガをダウンロード(シングルプロセス)")
+    @bp.arguments(MangaDexChapSchema, location="json")
+    @bp.response(200, description="マンガのダウンロードに成功した場合")
+    @bp.alt_response(400, description="無効なリクエスト")
+    def post(self, data):
+        upload_folder = os.path.join(current_app.config["UPLOAD_FOLDER"], "mangadex")
+        base_url = self.base_url + "/" + data["chapterId"]        
+        # ヘッドレスChromeの設定
+        options = Options()
+        options.add_argument("--headless")
+        options.add_argument("--disable-gpu")
+        driver = webdriver.Chrome(options=options)
+        return mangadex_chap_downloader_single(driver, upload_folder, base_url, self.max_wait_time)
+
+@bp.route("/mangadex_vol")
+class MangaDexVolMulti(MethodView):
+    base_chap_url = "https://mangadex.org/chapter"
+    base_feed_url = "https://api.mangadex.org/manga/{}/feed"
+    max_wait_time = 5 # 秒
+    img_dir = ""
+    @bp.doc(description="MangaDexのmangaIdから該当するvolがあればすべてのチャプターをダウンロード")
+    @bp.arguments(MangaDexVolSchema, location="json")
+    @bp.response(200, description="マンガのダウンロードに成功した場合")
+    @bp.alt_response(400, description="無効なリクエスト")
+    def post(self, data):
+        manga_id = data["mangaId"]
+        target_volume = str(data["vol"])
+
+        url = self.base_feed_url.format(manga_id)
+
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            feed = response.json()
+        except Exception as e:
+            abort(400, description=f"MangaDex APIエラー: {str(e)}")
+
+        # volume と type が一致するチャプターを抽出
+        matching_chapters = [
+            item for item in feed.get("data", [])
+            if item.get("type") == "chapter"
+            and item["attributes"].get("volume") == target_volume
+            and item["attributes"].get("chapter") is not None
+        ]
+
+        if not matching_chapters:
+            return {"message": f"Volume {target_volume} のチャプターが見つかりませんでした。"}, 200
+
+        # 最初の scanlation_group ID を取得
+        first_group_id = None
+        for item in matching_chapters:
+            for rel in item.get("relationships", []):
+                if rel["type"] == "scanlation_group":
+                    first_group_id = rel["id"]
+                    break
+            if first_group_id:
+                break
+
+        if not first_group_id:
+            abort(400, description="scanlation_group ID が見つかりませんでした。")
+
+        # scanlation_group が一致するチャプターを抽出
+        selected_chapters = [
+            item for item in matching_chapters
+            if any(rel.get("type") == "scanlation_group" and rel.get("id") == first_group_id
+                   for rel in item.get("relationships", []))
+        ]
+
+        # chapter番号でソート（数値または少数として扱う）
+        def parse_chapter(ch):
+            try:
+                return float(ch["attributes"].get("chapter"))
+            except (TypeError, ValueError):
+                return float('inf')  # ソート末尾に送る
+
+        selected_chapters.sort(key=parse_chapter)
+
+        chapter_ids = [ch["id"] for ch in selected_chapters]
+
+        upload_folder = os.path.join(current_app.config["UPLOAD_FOLDER"], "mangadex")
+              
         # ヘッドレスChromeの設定
         options = Options()
         options.add_argument("--headless")
         options.add_argument("--disable-gpu")
 
-        # 最初のドライバでページ情報取得
-        driver = webdriver.Chrome(options=options)
-        page_info = self.get_page_info(driver, base_url)
-        if not page_info:
-            print("ページ情報取得できず終了")
-            driver.quit()
-            abort(400, description="ページ情報取得できず終了")
-        driver.quit()
+        max_workers = max(os.cpu_count() // 2, 1)
+        total_chapters = len(chapter_ids)
+        chaps_per_worker = (total_chapters + max_workers - 1) // max_workers  # 割り切れない場合も対応
 
-        file_prefix = f'{page_info["title"]}_{page_info["chapter"]}'
-        self.img_dir = os.path.join(self.upload_folder, "images")
-        os.makedirs(self.img_dir, exist_ok=True)
-        zip_path = os.path.join(self.img_dir, f"{file_prefix}.zip")
-
-        if os.path.exists(zip_path):
-            return send_file(zip_path, as_attachment=True, mimetype='application/zip')
-
-        max_workers = 4
-        total_pages = page_info["page"]
-        pages_per_worker = (total_pages + max_workers - 1) // max_workers  # 切り上げ
-
-        def worker_task(start_page, end_page):
-            local_driver = webdriver.Chrome(options=options)
-            results = []
-            for page_num in range(start_page, end_page + 1):
-                result = self.process_page(local_driver, page_num, base_url, file_prefix)
-                results.append(result)
-            local_driver.quit()
-            return results
+        # 各ワーカーが行う処理
+        def worker_task(start_idx, end_idx):
+            driver = webdriver.Chrome(options=options)
+            try:
+                for chapter_id in chapter_ids[start_idx:end_idx]:                    
+                    base_url = self.base_chap_url + "/" + chapter_id
+                    mangadex_chap_downloader_single(driver, upload_folder, base_url, self.max_wait_time, gen_zip=False, driver_quit=False)
+            finally:
+                driver.quit()
 
         # 並列実行
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = []
             for i in range(max_workers):
-                start = i * pages_per_worker + 1
-                end = min((i + 1) * pages_per_worker, total_pages)
-                if start > end:
-                    break
-                futures.append(executor.submit(worker_task, start, end))
+                start_idx = i * chaps_per_worker
+                end_idx = min((i + 1) * chaps_per_worker, total_chapters)
+                if start_idx >= end_idx:
+                    break  # 不要なワーカーを作らない
+                futures.append(executor.submit(worker_task, start_idx, end_idx))
+            # 全てのスレッドの完了を待つ（オプション）
+            for future in futures:
+                future.result()
 
-            for future in as_completed(futures):
-                for result in future.result():
-                    print(result)
+        img_dir = os.path.join(upload_folder, "images")
+        jpg_files = glob.glob(os.path.join(img_dir, "*.jpg"))
+        zipfile_name = os.path.basename(jpg_files[0]).split("_")[0] + f"_Vol{target_volume}"
+        zip_path = os.path.join(img_dir, f"{zipfile_name}.zip")
 
-        # ZIP作成
+        # jpgファイルをZIPにまとめる
         with zipfile.ZipFile(zip_path, "w") as zipf:
-            for jpg_file in glob.glob(os.path.join(self.img_dir, "*.jpg")):
+            for jpg_file in jpg_files:
                 zipf.write(jpg_file, os.path.basename(jpg_file))
-
-        # 一時jpg削除（ZIP残す）
-        try:
-            for filename in os.listdir(self.img_dir):
-                file_path = os.path.join(self.img_dir, filename)
-                if file_path == zip_path:
-                    continue
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            print("jpgファイル削除完了")
-        except Exception as e:
-            print(f"jpgファイル削除エラー: {e}")
-            abort(404, description="jpgファイル削除エラー")
 
         if os.path.exists(zip_path):
             return send_file(zip_path, as_attachment=True, mimetype='application/zip')

@@ -51,7 +51,7 @@ class WeatherSchema(Schema):
     lon = fields.Float()  # 経度
     temperature = fields.Str()  # 温度
 
-class MangaDexSchema(Schema):
+class MangaDexChapSchema(Schema):
     chapterId = fields.Str(
         required=True,
         description=(
@@ -62,6 +62,19 @@ class MangaDexSchema(Schema):
         ),
         example="58d69744-662e-4dfc-8ab1-cf4ffe60428e"
     )
+
+class MangaDexVolSchema(Schema):
+    mangaId = fields.Str(
+        required=True,
+        description=(
+            "mangaIdの例:\n"
+            "- c3be71c6-014a-4bca-ba10-5137ffed90a3 (Dragon Ball GT)\n"
+            "- 02860cdf-1020-40f1-a23f-2025d80f6290 (GTO)\n"
+            "- d319df2e2-e6a6-4e3a-a31c-68539c140a84 (Slam Dunk)"
+        ),
+        example="c3be71c6-014a-4bca-ba10-5137ffed90a3"
+    )
+    vol = fields.Int(required=True, example=1)
     
 class YoutubeDownloaderSchema(Schema):
     url = fields.Str(
