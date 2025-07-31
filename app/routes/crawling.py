@@ -184,6 +184,7 @@ class MangaDexVolMulti(MethodView):
     @bp.response(200, description="マンガのダウンロードに成功した場合")
     @bp.alt_response(400, description="無効なリクエスト")
     def post(self, data):
+        """20~30個ダウンロードするとエラー発生して使えない"""
         manga_id = data["mangaId"]
         target_volume = str(data["vol"])
 
